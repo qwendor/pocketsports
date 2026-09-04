@@ -89,7 +89,7 @@ function mkPlayer(slot,name,conn,tok){
 }
 function send(p,m){ if(p&&p.conn&&p.conn.open){ try{p.conn.send(m);}catch(e){} } if(p&&p.fake)p.inbox.push(m); }
 function sendAll(m){ G.players.forEach(p=>send(p,m)); }
-function phoneUI(p,cfg){ p.lastUI=cfg; send(p,Object.assign({t:'ui'},cfg)); }
+function phoneUI(p,cfg){ if(cfg.icon&&ARTKEY[cfg.icon])cfg.art=ARTKEY[cfg.icon]; p.lastUI=cfg; send(p,Object.assign({t:'ui'},cfg)); }
 function buzz(p,ms=80){ send(p,{t:'buzz',ms}); }
 function onCtrlMsg(c,m){
   if(!m||typeof m!=='object')return;
@@ -103,14 +103,16 @@ function onCtrlMsg(c,m){
       toast(p.name+' joined as '+p.cname); AUD.ding();
       if(G.sport&&G.sport.onJoin)G.sport.onJoin(p);
     }
-    c._p=p; p.lastSeen=now();
+    c._p=p; p.lastSeen=now(); { const d=$('#chip'+p.slot); if(d)d.classList.remove('off'); }
     send(p,{t:'hello',slot:p.slot,color:p.color,cname:p.cname,name:p.name,code:NET.code});
     refreshPhones(); renderLobby(); return;
   }
   const p=c._p||(c.fakeP); if(!p)return; p.lastSeen=now();
   switch(m.t){
-    case 's0': p.s0={ts:m.ts,hostT:now()-(G.manual?0:p.owd)}; p.hasMotion=true; if(G.sport&&G.sport.onSwingStart)G.sport.onSwingStart(p); break;
-    case 's1': { let start; if(p.s0&&p.s0.ts===m.ts0)start=p.s0.hostT; else start=now()-(m.ts1-m.ts0)/1000-(G.manual?0:p.owd); p.s0=null; p.hasMotion=true;
+    case 's0': { const start=now()-(G.manual?0:p.owd); p.s0={ts:m.ts,hostT:start}; p.hasMotion=true; swingChip(p); if(G.sport&&G.sport.onSwingStart)G.sport.onSwingStart(p);
+      // the swing animation starts now; the outcome is resolved when s1 (peak power) arrives, or after 260 ms with the power seen so far
+      clearTimeout(p.s0timer); p.s0timer=setTimeout(()=>{ if(p.s0&&p.s0.ts===m.ts){ p.s0=null; p.doneTs=m.ts; onSwing(p,{start,age:now()-start,raw:m.p||0,pw:clamp((m.p||0)*1.5/20,.6,1.4),dx:m.dx||0,dy:m.dy||0,dz:m.dz||0,ra:0,rb:0,rg:m.rg||0,b:m.b||0,g:m.g||0,touch:!!m.touch,late:true}); } },260); break; }
+    case 's1': { if(p.doneTs===m.ts0)break; let start; if(p.s0&&p.s0.ts===m.ts0)start=p.s0.hostT; else { start=now()-(m.ts1-m.ts0)/1000-(G.manual?0:p.owd); swingChip(p); if(G.sport&&G.sport.onSwingStart)G.sport.onSwingStart(p); } clearTimeout(p.s0timer); p.s0=null; p.hasMotion=true;
       const sw={start,age:now()-start,raw:m.p||0,pw:clamp((m.p||0)/20,.3,1.6),dx:m.dx||0,dy:m.dy||0,dz:m.dz||0,ra:m.ra||0,rb:m.rb||0,rg:m.rg||0,b:m.b||0,g:m.g||0,touch:!!m.touch};
       onSwing(p,sw); break; }
     case 'o': p.orient={a:m.a||0,b:m.b||0,g:m.g||0}; if(G.sport&&G.sport.onOrient)G.sport.onOrient(p); break;
@@ -119,7 +121,10 @@ function onCtrlMsg(c,m){
     case 'motion': p.hasMotion=!!m.ok; renderLobby(); break;
   }
 }
-function onCtrlClose(c){ const p=c._p; if(!p||p.conn!==c)return; p.online=false; toast(p.name+' disconnected'); renderLobby(); }
+function onCtrlClose(c){ const p=c._p; if(!p||p.conn!==c)return; p.online=false; toast(p.name+' disconnected'); renderLobby(); const d=$('#chip'+p.slot); if(d)d.classList.add('off'); }
+const ARTKEY={'🎾':'ic_tennis','🎳':'ic_bowling','⚾':'ic_baseball','⛳':'ic_golf','🥊':'ic_boxing'};
+function buildChips(){ const c=$('#chips'); c.innerHTML=''; G.players.forEach(p=>{ const d=document.createElement('div'); d.className='chip'+(p.online?'':' off'); d.id='chip'+p.slot; d.style.setProperty('--c',p.color); d.innerHTML='<span class="dot"></span>'+esc(p.name); c.appendChild(d); }); }
+function swingChip(p){ const d=$('#chip'+p.slot); if(d){ d.classList.add('pulse'); clearTimeout(d._t); d._t=setTimeout(()=>d.classList.remove('pulse'),220); } if(G.state==='lobby'){ const c=$('#plist').children[p.slot]; if(c){ c.classList.add('swing'); AUD.swish(); clearTimeout(c._t); c._t=setTimeout(()=>c.classList.remove('swing'),260); } } }
 function onSwing(p,sw){ if(G.sport&&typeof G.sport.t==='number'){ sw.age=clamp(sw.age,0,.5); sw.start=G.sport.t-sw.age; } if(G.sport&&G.sport.onSwing)G.sport.onSwing(p,sw); }
 function onBtn(p,id,down,m){
   if(G.state==='play'&&G.sport){ if(G.sport.onBtn)G.sport.onBtn(p,id,down,m); return; }
@@ -152,13 +157,13 @@ function showLobby(){ G.state='lobby'; disposeSport(); showScreen('lobby'); rend
 function showMenu(){ G.state='menu'; disposeSport(); showScreen('menu'); renderMenu(); refreshPhones(); }
 function menuMove(d){ const ids=Object.keys(SPORTS); G.menuIdx=(G.menuIdx+d+ids.length)%ids.length; renderMenu(); AUD.tick(); }
 function menuPick(){ const id=Object.keys(SPORTS)[G.menuIdx]; showIntro(id); }
-function renderMenu(){ const t=$('#tiles'); const ids=Object.keys(SPORTS); if(!t.children.length){ ids.forEach((id,i)=>{ const s=SPORTS[id]; const d=document.createElement('div'); d.className='tile'; d.innerHTML=`<div class="ic">${s.icon}</div><div class="nm">${s.name}</div><div class="pl">${s.players}</div>`; d.onclick=()=>{G.menuIdx=i;renderMenu();showIntro(id);}; t.appendChild(d); }); }
+function renderMenu(){ const t=$('#tiles'); const ids=Object.keys(SPORTS); if(!t.children.length){ ids.forEach((id,i)=>{ const s=SPORTS[id]; const d=document.createElement('div'); d.className='tile'; d.innerHTML=`<div class="ic">${ART['ic_'+id]?'<img src="'+ART['ic_'+id]+'" alt="">':s.icon}</div><div class="nm">${s.name}</div><div class="pl">${s.players}</div>`; d.onclick=()=>{G.menuIdx=i;renderMenu();showIntro(id);}; t.appendChild(d); }); }
   [...t.children].forEach((c,i)=>c.classList.toggle('sel',i===G.menuIdx)); }
-function showIntro(id){ G.state='intro'; G.sportId=id; const s=SPORTS[id]; showScreen('intro'); $('#introIc').textContent=s.icon; $('#introName').textContent=s.name; $('#introHow').innerHTML=s.how.map(h=>'<li>'+h+'</li>').join(''); $('#introWho').textContent=s.who(G.players.length); refreshPhones(); AUD.tick(); }
+function showIntro(id){ G.state='intro'; G.sportId=id; const s=SPORTS[id]; showScreen('intro'); $('#introIc').innerHTML=ART['ic_'+id]?'<img src="'+ART['ic_'+id]+'" alt="">':s.icon; $('#introName').textContent=s.name; $('#introHow').innerHTML=s.how.map(h=>'<li>'+h+'</li>').join(''); $('#introWho').textContent=s.who(G.players.length); refreshPhones(); AUD.tick(); }
 function startSport(id){
   G.sportId=id; G.state='play'; hideBanner(); showScreen(''); $('#hud').classList.remove('hidden');
   ['#hudTL','#hudTC','#hudTR','#hudB'].forEach(s=>$(s).innerHTML=''); $('#bowlcard').classList.add('hidden'); $('#golfcard').classList.add('hidden'); $('#minimap').classList.add('hidden'); $('#gauge').classList.add('hidden');
-  disposeSport(); const s=SPORTS[id]; G.sport=Object.create(s); G.sport.build(G.players.slice()); AUD.init();
+  disposeSport(); buildChips(); const s=SPORTS[id]; G.sport=Object.create(s); G.sport.build(G.players.slice()); AUD.init();
 }
 function disposeSport(){ if(G.sport){ try{G.sport.dispose&&G.sport.dispose();}catch(e){} G.sport=null; } if(R.scene){ R.scene=null; } hideBanner(); $('#hud').classList.add('hidden'); }
 function endSport(rows,title){

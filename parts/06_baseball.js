@@ -6,19 +6,16 @@ SPORTS.baseball={
   build(players){
     const s=newScene({sky:0x8fd3ff,shadow:40,sunX:30,sunY:60,sunZ:20,fogNear:150,fogFar:400});
     this.players=players.length?players:[cpuPlayer('CPU','#8899aa')]; this.stats=this.players.map(()=>({hr:0,dist:0,best:0,n:0})); this.turn=0; this.round=0; this.t=0; this.stateT=0;
-    s.add(plane(600,600,0x3f9451,{}));
-    const dirt=disc(29,0xc59a63,{}); dirt.position.set(0,.006,-19); s.add(dirt); const inf=plane(27.4,27.4,0x4aa85a,{}); inf.position.set(0,.012,-19.4); inf.rotation.z=Math.PI/4; s.add(inf);
-    const home=disc(4,0xc59a63,{}); home.position.set(0,.014,0); s.add(home);
+    s.add(tplane(700,700,'tex_grass',0x3f9451,6)); skyDome(s); backdrop(s,'bg_crowd',{r:118,h:34,len:Math.PI*1.15,center:Math.PI,rep:4,y:17}); backdrop(s,'bg_crowd',{r:30,h:10,len:Math.PI*.8,center:0,rep:2,y:5});
+    const dirt=tdisc(29,'tex_dirt',0xc59a63,6); dirt.position.set(0,.006,-19); s.add(dirt); const inf=plane(27.4,27.4,0x4aa85a,{}); inf.position.set(0,.012,-19.4); inf.rotation.z=Math.PI/4; s.add(inf);
+    const home=tdisc(4,'tex_dirt',0xc59a63,6); home.position.set(0,.014,0); s.add(home);
     const mound=cyl(2.8,3.2,.3,0xc59a63); mound.position.set(0,.15,-18.4); s.add(mound);
     [[19.4,-19.4],[0,-38.8],[-19.4,-19.4]].forEach(([x,z])=>{ const b=box(.9,.12,.9,0xffffff); b.position.set(x,.06,z); s.add(b); }); const hp=box(.6,.03,.6,0xffffff,{cast:false}); hp.position.set(0,.02,0); s.add(hp);
     [[0,0,19.4,-19.4],[19.4,-19.4,0,-38.8],[0,-38.8,-19.4,-19.4],[-19.4,-19.4,0,0]].forEach(([x1,z1,x2,z2])=>{ const l=line(1.6,27.4,0xc59a63,(x1+x2)/2,(z1+z2)/2,.01,Math.atan2(x2-x1,z2-z1)); s.add(l); });
     for(const sx of[-1,1]){ const fl=line(.3,150,0xffffff,sx*53,-53,.02,sx*Math.PI/4); s.add(fl); }
     const F=this.FENCE; for(let a=-48;a<48;a+=4){ const r=a*Math.PI/180, r2=(a+4)*Math.PI/180; const x=Math.sin((r+r2)/2)*F, z=-Math.cos((r+r2)/2)*F; const seg=box(F*(r2-r)+.3,3.2,.4,0x2f6fb0,{cast:false}); seg.position.set(x,1.6,z); seg.rotation.y=-(r+r2)/2; s.add(seg); const top=box(F*(r2-r)+.3,.2,.5,0xffc233,{cast:false}); top.position.set(x,3.3,z); top.rotation.y=-(r+r2)/2; s.add(top);
-      for(let i=0;i<5;i++){ const st=box(F*(r2-r)+1,2,4,i%2?0x9fb3c8:0x8ea3b8,{cast:false}); const rr=F+4+i*4; st.position.set(Math.sin((r+r2)/2)*rr,1+i*2,-Math.cos((r+r2)/2)*rr); st.rotation.y=-(r+r2)/2; s.add(st); } }
-    const spots=[]; for(let a=-45;a<=45;a+=6){ const r=a*Math.PI/180; for(let i=0;i<4;i++){ const rr=F+5+i*4; spots.push([Math.sin(r)*rr,2.4+i*2,-Math.cos(r)*rr,2,.3,2]); } } crowd(s,spots,400);
-    [[-60,45,-160],[40,50,-220],[120,42,-120],[-130,48,-100]].forEach(([x,y,z])=>s.add(cloud(x,y,z,4)));
-    stand(s,0,0,14,40,Math.PI,4); crowd(s,[[0,1.4,12.5,18,3,1]],90);
-    this.miis=this.players.map(p=>{ const m=makeMii(p.color,p.name); m.setTool('bat'); m.g.visible=false; m.g.position.set(-.85,0,.15); m.g.rotation.y=Math.PI/2; s.add(m.g); return m; });
+      if(!ART.bg_crowd)for(let i=0;i<5;i++){ const st=box(F*(r2-r)+1,2,4,i%2?0x9fb3c8:0x8ea3b8,{cast:false}); const rr=F+4+i*4; st.position.set(Math.sin((r+r2)/2)*rr,1+i*2,-Math.cos((r+r2)/2)*rr); st.rotation.y=-(r+r2)/2; s.add(st); } }
+    this.miis=this.players.map(p=>{ const m=makeMii(p.color,p.name); m.setTool('bat'); m.baseExpr='determined'; m.face('determined'); m.g.visible=false; m.g.position.set(-.85,0,.15); m.g.rotation.y=Math.PI/2; s.add(m.g); return m; });
     this.pitcher=makeMii('#dddddd','',{}); this.pitcher.g.position.set(0,.3,-18); this.pitcher.g.rotation.y=0; s.add(this.pitcher.g);
     this.catcher=makeMii('#555555','',{}); this.catcher.g.position.set(0,0,1.6); this.catcher.g.rotation.y=Math.PI; this.catcher.g.scale.set(1,.7,1); s.add(this.catcher.g);
     this.ball={pos:V3(0,1.7,-17.7),vel:V3(),active:false,phase:'none',landed:false}; this.ballM=sph(.075,0xffffff,{phong:true},12); s.add(this.ballM); this.shadow=ballShadow(s);
@@ -29,16 +26,17 @@ SPORTS.baseball={
   beginPitch(){ this.state='windup'; this.stateT=0; this.ball.active=false; this.ball.phase='none'; this.swung=false; this.miis.forEach((m,i)=>{ m.g.visible=i===this.turn; m.anim=null; m.rest=mii=>{ mii.arm('R',-2.2,-.6,-.3); mii.arm('L',-1.9,.5,.4); mii.body.rotation.y=lerp(mii.body.rotation.y,.25,.1); }; });
     const p=this.cur(); if(p.cpu)this.cpuDt=gauss()*.06; hud('B',turnBox(p,`Pitch ${this.round+1} of ${this.PITCHES}`)); this.phones();
     this.pitcher.play('windup',1.3,(m,k)=>{ m.arm('R',-k*2.6,0,-.4*k); m.arm('L',-1.2*Math.sin(k*Math.PI),0,.6); m.body.rotation.x=-.2*Math.sin(k*Math.PI); m.headG.rotation.x=.1*k; }); },
-  pitch(){ const b=this.ball; b.pos.set(.3,1.85,-17.6); const T=.92; const tx=0,ty=1.05,tz=.15; b.vel.set((tx-b.pos.x)/T,(ty-b.pos.y+.5*9.8*T*T)/T,(tz-b.pos.z)/T); b.active=true; b.phase='pitch'; this.ideal=this.t+T; this.state='pitch'; this.stateT=0; AUD.swish(); this.pitcher.play('throw',.5,(m,k)=>{ m.arm('R',lerp(-2.6,.6,easeOut(k)),0,-.4*(1-k)); m.body.rotation.x=.2*Math.sin(k*Math.PI); }); const p=this.cur(); if(p.cpu)this.cpuAt=this.ideal+this.cpuDt; },
-  animSwing(m){ AUD.whoosh(); m.play('swing',.45,(mii,k)=>{ const e=easeOut(k); mii.arm('R',lerp(-2.2,-1.4,e),lerp(-.6,1.9,e),-.3); mii.arm('L',lerp(-1.9,-1.3,e),lerp(.5,2.2,e),.4); mii.body.rotation.y=lerp(.25,-1.1,e); mii.headG.rotation.y=-.4*e; }); },
+  pitch(){ const b=this.ball; b.pos.set(.3,1.85,-17.6); const T=1.1; const tx=0,ty=1.05,tz=.15; b.vel.set((tx-b.pos.x)/T,(ty-b.pos.y+.5*9.8*T*T)/T,(tz-b.pos.z)/T); b.active=true; b.phase='pitch'; this.ideal=this.t+T; this.state='pitch'; this.stateT=0; AUD.swish(); this.pitcher.play('throw',.5,(m,k)=>{ m.arm('R',lerp(-2.6,.6,easeOut(k)),0,-.4*(1-k)); m.body.rotation.x=.2*Math.sin(k*Math.PI); }); const p=this.cur(); if(p.cpu)this.cpuAt=this.ideal+this.cpuDt; },
+  animSwing(m){ if(m.anim&&m.anim.name==='swing'&&m.anim.t<.3)return; AUD.whoosh(); m.play('swing',.45,(mii,k)=>{ const e=easeOut(k); mii.arm('R',lerp(-2.2,-1.4,e),lerp(-.6,1.9,e),-.3); mii.arm('L',lerp(-1.9,-1.3,e),lerp(.5,2.2,e),.4); mii.body.rotation.y=lerp(.25,-1.1,e); mii.headG.rotation.y=-.4*e; }); },
+  onSwingStart(p){ if(this.cur()===p&&(this.state==='pitch'||this.state==='windup'))this.animSwing(this.miis[this.turn]); },
   onSwing(p,sw){ if(this.cur()!==p)return; this.swing(sw.start,sw.pw,sw); },
   swing(start,pw,sw){ if(this.swung||this.state!=='pitch'&&this.state!=='windup')return; const m=this.miis[this.turn]; if(this.state==='windup'){ this.animSwing(m); return; } this.swung=true; this.animSwing(m);
-    const dt=start-this.ideal; const q=Math.abs(dt)<=.05?1:Math.max(0,1-(Math.abs(dt)-.05)/.2); const b=this.ball;
-    if(q<=0||b.pos.z>1.2){ this.result('SWING AND A MISS','',0); return; }
-    const th=(clamp(dt/.25,-1,1)*50+gauss()*5)*Math.PI/180, ph=(20+15*q+gauss()*7)*Math.PI/180; const v=22+26*q*clamp(pw,.5,1.4)/1.4;
+    const dt=start-this.ideal; const q=Math.abs(dt)<=.06?1:Math.max(0,1-(Math.abs(dt)-.06)/.24); const b=this.ball;
+    if(q<=0||b.pos.z>1.4){ this.result('SWING AND A MISS','',0); m.face('sad',2); return; }
+    const th=(clamp(dt/.3,-1,1)*50+gauss()*5)*Math.PI/180, ph=(20+15*q+gauss()*7)*Math.PI/180; const v=22+26*q*clamp(pw,.5,1.4)/1.4;
     b.vel.set(Math.sin(th)*Math.cos(ph)*v,Math.sin(ph)*v,-Math.cos(th)*Math.cos(ph)*v); b.phase='hit'; b.landed=false; b.maxD=0; this.state='hit'; this.stateT=0; this.hitQ=q; this.hitTheta=th; AUD.crack(); const p=this.cur(); if(!p.cpu)buzz(p,120);
     if(!sw||!sw.touch)b.pos.z=Math.min(b.pos.z,.2); },
-  result(txt,sub,dist,hr){ this.state='result'; this.stateT=0; const st=this.stats[this.turn]; st.n++; st.dist+=dist; st.best=Math.max(st.best,dist); if(hr){ st.hr++; AUD.cheer(); const p=this.cur(); if(!p.cpu)buzz(p,400); } banner(txt,sub,2,hr?'gold':''); this.hudScore(); hud('B',''); },
+  result(txt,sub,dist,hr){ this.state='result'; this.stateT=0; const st=this.stats[this.turn]; st.n++; st.dist+=dist; st.best=Math.max(st.best,dist); if(hr){ st.hr++; AUD.cheer(); const p=this.cur(); if(!p.cpu)buzz(p,400); const mm=this.miis[this.turn]; mm.face('cheer',3); mm.play('cheer',1.2,(m,k)=>{ m.arm('R',-2.6-Math.sin(k*20)*.3,0,0); m.arm('L',-2.6+Math.sin(k*20)*.3,0,0); m.body.position.y=Math.abs(Math.sin(k*12))*.18; }); } banner(txt,sub,2,hr?'gold':''); this.hudScore(); hud('B',''); },
   hudScore(){ hud('TL',scoreboard(this.players.map((p,i)=>({name:p.name,color:p.color,v:this.stats[i].hr+' <small style="font-size:.55em;color:#6b7c93">HR</small>'})))); },
   update(dt){
     this.t+=dt; this.stateT+=dt; const b=this.ball, p=this.cur();

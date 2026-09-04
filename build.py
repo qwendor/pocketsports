@@ -10,4 +10,5 @@ print(r.stdout.strip(), r.stderr.strip())
 if r.returncode == 0:
     d = r'C:\Users\qwend\OneDrive\Desktop\PocketSports.html'
     shutil.copy('index.html', d)
+    shutil.copy('art.js', os.path.join(os.path.dirname(d), 'art.js'))
     print('copied to', d, len(out.splitlines()), 'lines')

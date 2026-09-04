@@ -20,14 +20,14 @@ SPORTS.bowling={
     this.players=players.length?players:[cpuPlayer('CPU','#8899aa')]; this.frames=this.players.map(()=>[]); this.pi=0; this.fi=0; this.roll=0; this.t=0; this.stateT=0;
     // building
     const floor=plane(60,60,0x39455e,{}); floor.position.set(0,-.02,-8); s.add(floor);
-    const back=box(60,10,1,0x1d2438,{cast:false}); back.position.set(0,5,-24); s.add(back);
-    const lanes=[-2.2,0,2.2]; lanes.forEach(x=>{ const l=box(1.05,.04,24,0xc9955a,{cast:false}); l.position.set(x,0,-8); s.add(l); for(const sx of[-1,1]){ const g=box(.24,.04,24,0x2a3142,{cast:false}); g.position.set(x+sx*.66,-.04,-8); s.add(g); }
+    if(!flatBackdrop(s,'bg_alley',52,19,0,8.6,-24.5)){ const back=box(60,10,1,0x1d2438,{cast:false}); back.position.set(0,5,-24); s.add(back); }
+    const lanes=[-2.2,0,2.2]; lanes.forEach(x=>{ const l=tbox(1.05,.04,24,'tex_lane',0xc9955a,1.05); l.position.set(x,0,-8); s.add(l); for(const sx of[-1,1]){ const g=box(.24,.04,24,0x2a3142,{cast:false}); g.position.set(x+sx*.66,-.04,-8); s.add(g); }
       for(let i=0;i<7;i++){ const a=mesh(new THREE.ConeGeometry(.04,.16,3),0x6b4b2a,{cast:false}); a.rotation.x=-Math.PI/2; a.rotation.z=0; a.position.set(x+(i-3)*.14,.025,-4.5-Math.abs(i-3)*.28); s.add(a); }
       const pit=box(1.6,.6,1.2,0x0e1220,{cast:false}); pit.position.set(x,.3,-20.6); s.add(pit); const cap=box(1.7,.2,1.4,0x1d2438,{cast:false}); cap.position.set(x,.95,-20.6); s.add(cap);
       const foul=box(1.05,.045,.05,0x222222,{cast:false}); foul.position.set(x,.005,0); s.add(foul);
       const app=box(1.6,.04,6,0xcdb48e,{cast:false}); app.position.set(x,-.005,3); s.add(app);
       if(x!==0){ PINSPOTS.forEach(([px,pz])=>{ const pm=this.pinMesh(); pm.position.set(x+px,0,-18.29+pz); s.add(pm); }); } });
-    const neon=box(8,.3,.1,0xff5a5f,{cast:false,m:{emissive:0xff5a5f}}); neon.position.set(0,3.2,-23.4); s.add(neon);
+    if(!ART.bg_alley){ const neon=box(8,.3,.1,0xff5a5f,{cast:false,m:{emissive:0xff5a5f}}); neon.position.set(0,3.2,-23.4); s.add(neon); }
     for(let i=0;i<4;i++){ const lamp=new THREE.PointLight(0xffe7c2,.25,20); lamp.position.set(-3+i*2,4,-14+i*2); s.add(lamp); }
     const seats=box(8,.5,2,0x8a2f3a,{cast:false}); seats.position.set(0,.25,6.5); s.add(seats);
     crowd(s,[[0,.9,6.6,3.5,.2,.6]],14);
@@ -36,27 +36,28 @@ SPORTS.bowling={
     this.guide=new THREE.Group(); s.add(this.guide); for(let i=0;i<12;i++){ const d=disc(.05,0xffffff,{m:{transparent:true,opacity:.6},recv:false}); d.position.set(0,.03,-1-i*1.4); this.guide.add(d); }
     this.miis=this.players.map(p=>{ const m=makeMii(p.color,p.name); m.setTool('ball'); m.g.visible=false; s.add(m.g); return m; });
     this.setPins(true); this.beginTurn(); this.card();
-    camSet(V3(1.5,2.4,6.6),V3(-.1,.5,-8));
+    camSet(V3(2.3,2.7,6.4),V3(-.3,.5,-8));
   },
   pinMesh(){ const g=new THREE.Group(); const b=cyl(.045,.058,.3,0xffffff,12); b.position.y=.15; g.add(b); const n=cyl(.03,.045,.08,0xffffff,12); n.position.y=.33; g.add(n); const h=sph(.04,0xffffff,{},10); h.position.y=.37; g.add(h); const st=mesh(new THREE.TorusGeometry(.046,.012,6,16),0xe0313f); st.rotation.x=Math.PI/2; st.position.y=.3; g.add(st); return g; },
   setPins(fresh){ if(fresh){ this.pins.forEach(p=>R.scene.remove(p.m)); this.pins=PINSPOTS.map(([x,z],i)=>{ const m=this.pinMesh(); m.position.set(x,0,-18.29+z); R.scene.add(m); return {i,x,z:-18.29+z,ox:x,oz:-18.29+z,vx:0,vz:0,up:true,fallT:0,m,gone:false,rot:0,dir:0,drop:0}; }); }
     else { this.pins=this.pins.filter(p=>{ if(!p.up){ R.scene.remove(p.m); return false; } p.ox=p.x; p.oz=p.z; p.vx=p.vz=0; return true; }); } },
-  beginTurn(){ this.state='aim'; this.stateT=0; const p=this.players[this.pi]; this.ball.active=false; this.ball.gutter=false; this.ballM.visible=false; this.hold=false; this.holdT=0; this.aim=0; this.released=false;
-    this.miis.forEach((m,i)=>{ m.g.visible=i===this.pi; m.g.position.set(0,0,3.4); m.g.rotation.y=Math.PI; m.arm('R',0,0,0); m.arm('L',0,0,0); m.body.rotation.y=0; m.anim=null; m.rest=null; if(m.ballMesh)m.ballMesh.visible=true; });
+  beginTurn(){ this.state='aim'; this.stateT=0; const p=this.players[this.pi]; this.ball.active=false; this.ball.gutter=false; this.ballM.visible=false; this.hold=false; this.holdT=0; this.aim=0; this.released=false; this.yaw0=null;
+    this.miis.forEach((m,i)=>{ m.g.visible=i===this.pi; m.g.position.set(0,0,2.6); m.g.rotation.y=Math.PI; m.arm('R',0,0,0); m.arm('L',0,0,0); m.body.rotation.y=0; m.anim=null; m.rest=null; if(m.ballMesh)m.ballMesh.visible=true; });
     if(p.cpu){ this.cpuAt=this.t+1.5; }
     hud('B',turnBox(p,`Frame ${this.fi+1} · ${this.roll===0?'1st':this.roll===1?'2nd':'3rd'} ball`));
     this.phones(); this.card(); },
-  phones(){ this.players.forEach((p,i)=>{ if(p.cpu)return; if(i===this.pi)phoneUI(p,{mode:'bowl',icon:'🎳',title:'Your turn',sub:'Tilt to aim. Hold the button, swing your arm, and let go to release.',btns:[{id:'hold',label:'HOLD · SWING · RELEASE',hold:1}],rate:15}); else phoneUI(p,{mode:'wait',icon:'🎳',title:'Waiting',sub:this.players[this.pi].name+' is bowling. Frame '+(this.fi+1),btns:[],rate:3}); }); },
+  phones(){ this.players.forEach((p,i)=>{ if(p.cpu)return; if(i===this.pi)phoneUI(p,{mode:'bowl',icon:'🎳',title:'Your turn',sub:'Tilt to aim. Hold the button, swing your arm, and let go to release.',btns:[{id:'hold',label:'HOLD · SWING · RELEASE',hold:1},{id:'recenter',label:'RE-CENTER AIM',sec:1}],rate:15}); else phoneUI(p,{mode:'wait',icon:'🎳',title:'Waiting',sub:this.players[this.pi].name+' is bowling. Frame '+(this.fi+1),btns:[],rate:3}); }); },
   card(){ const el=$('#bowlcard'); el.classList.remove('hidden'); let h='<table><tr><th></th>'+Array.from({length:10},(_,i)=>'<th>'+(i+1)+'</th>').join('')+'<th>Total</th></tr>';
     this.players.forEach((p,pi)=>{ const fr=this.frames[pi]; const sc=bowlScore(fr); h+=`<tr class="${pi===this.pi?'cur':''}"><td class="nm" style="--c:${p.color}">${esc(p.name)}</td>`;
       for(let f=0;f<10;f++){ const r=fr[f]||[]; const marks=r.map((v,i)=>{ if(v===10)return 'X'; if(i>0&&r[i-1]!==10&&r[i-1]+v===10)return '/'; if(f===9&&i===2&&r[1]!==10&&r[1]+v===10)return '/'; return v===0?'-':v; }); h+=`<td><div class="r">${marks.map(m=>'<span>'+m+'</span>').join('')||'&nbsp;'}</div><div class="t">${sc.cum[f]!=null?sc.cum[f]:'&nbsp;'}</div></td>`; }
       h+=`<td class="t">${sc.total}</td></tr>`; });
     el.innerHTML=h+'</table>'; },
-  onOrient(p){ if(this.players[this.pi]===p&&this.state==='aim'){ this.aim=clamp(p.orient.g/30,-1,1); } },
-  onBtn(p,id,down,m){ if(this.players[this.pi]!==p||this.state!=='aim')return; if(id!=='hold')return;
+  onOrient(p){ if(this.players[this.pi]===p&&this.state==='aim'){ this.aim=aimFrom(this,p); } },
+  onBtn(p,id,down,m){ if(this.players[this.pi]!==p||this.state!=='aim')return; if(id==='recenter'&&down){ this.yaw0=null; this.aim=0; return; } if(id!=='hold')return;
     if(down){ this.startHold(); } else if(this.hold){ this.throwBall(clamp((m.p||12)/20,.3,1.6),(m.rg||0),(m.dx||0)); } },
-  onSwing(p,sw){ if(this.players[this.pi]!==p||this.state!=='aim')return; if(!this.hold){ this.startHold(); this.throwBall(sw.pw,sw.rg,sw.dx,true); } else this.throwBall(sw.pw,sw.rg,sw.dx); },
-  startHold(){ if(this.hold)return; this.hold=true; this.holdT=0; const m=this.miis[this.pi]; m.play('back',.9,(mii,k)=>{ mii.arm('R',easeOut(k)*1.35,0,0); mii.g.position.z=3.4-easeOut(k)*2.2; mii.body.rotation.x=.12*k; }); },
+  onSwingStart(p){ if(this.players[this.pi]===p&&this.state==='aim'&&!this.hold)this.startHold(); },
+  onSwing(p,sw){ if(this.players[this.pi]!==p||this.state!=='aim')return; if(!this.hold)this.startHold(); this.throwBall(sw.pw,sw.rg,sw.dx,this.holdT<.45); },
+  startHold(){ if(this.hold)return; this.hold=true; this.holdT=0; const m=this.miis[this.pi]; m.play('back',.9,(mii,k)=>{ mii.arm('R',easeOut(k)*1.35,0,0); mii.g.position.z=2.6-easeOut(k)*1.4; mii.body.rotation.x=.12*k; }); },
   throwBall(pw,rg,dx,quick){ if(this.released)return; this.released=true; const m=this.miis[this.pi]; const self=this;
     const delay=quick?.35:0; const speed=clamp(4.2+5.2*pw,4.5,11.5); const spin=clamp(-(rg||0)/600,-1,1); const ang=this.aim*4.5+clamp(dx,-1,1)*1.2+gauss()*.4; this.pendingThrow={speed,spin,ang};
     m.play('throw',.55+delay,(mii,k)=>{ const kk=clamp((k*(0.55+delay)-delay)/.55,0,1); mii.arm('R',lerp(1.35,-1.5,easeOut(kk)),0,0); mii.g.position.z=1.2-easeOut(kk)*1.0; mii.body.rotation.x=lerp(.12,.35,kk); if(kk>.55&&self.pendingThrow){ self.launch(self.pendingThrow); self.pendingThrow=null; } });
@@ -66,7 +67,7 @@ SPORTS.bowling={
     this.t+=dt; this.stateT+=dt; const p=this.players[this.pi];
     if(this.state==='aim'){ this.guide.visible=!this.hold; this.guide.rotation.y=-this.aim*4.5*Math.PI/180; if(p.cpu&&this.t>this.cpuAt&&!this.hold){ this.aim=(Math.random()<.5?1:-1)*.5+gauss()*.15; this.startHold(); setTimeout(()=>{ if(this.state==='aim')this.throwBall(1+gauss()*.15,0,0); },700); }
       if(this.hold&&!this.released){ this.holdT+=dt; if(this.holdT>6){ this.throwBall(.8,0,0); } }
-      camLerp(V3(1.5+this.aim*.3,2.4,6.6),V3(-.1+this.aim*.5,.5,-8),.06); }
+      camLerp(V3(2.3+this.aim*.3,2.7,6.4),V3(-.3+this.aim*.5,.5,-8),.06); }
     else if(this.state==='roll'){ this.physics(dt); const b=this.ball; camLerp(V3(b.x*.4,1.5,b.z+4.2),V3(b.x*.2,.25,b.z-7),.08); if(!b.active){ this.state='settle'; this.stateT=0; } }
     else if(this.state==='settle'){ this.physics(dt); camLerp(V3(0,1.4,-14.2),V3(0,.3,-18.6),.06); const moving=this.pins.some(pn=>!pn.gone&&(Math.abs(pn.vx)+Math.abs(pn.vz))>.05); if((!moving&&this.stateT>1.2)||this.stateT>4){ this.finishRoll(); } }
     else if(this.state==='result'){ this.physics(dt); if(this.stateT>2.2){ this.nextTurn(); } }
@@ -92,7 +93,7 @@ SPORTS.bowling={
   knock(pn){ if(!pn.up)return; pn.up=false; pn.fallT=0; pn.dir=Math.atan2(pn.vx,pn.vz)+Math.PI; pn.flip=false; AUD.crash(); },
   finishRoll(){ this.state='result'; this.stateT=0; const standing=this.pins.filter(p=>p.up).length; const before=this.pins.length; const knocked=before-standing; const fr=this.frames[this.pi]; if(!fr[this.fi])fr[this.fi]=[]; fr[this.fi].push(knocked);
     const p=this.players[this.pi]; let txt=null; if(knocked===10&&this.roll===0)txt='STRIKE!'; else if(this.fi===9&&knocked===10&&this.roll>0&&before===10)txt='STRIKE!'; else if(knocked===before&&this.roll>0&&before<10&&knocked>0)txt='SPARE!'; else if(knocked===0)txt=this.ball.gutter?'GUTTER':'MISS'; else txt=knocked+' PIN'+(knocked===1?'':'S');
-    banner(txt,p.name,1.8,txt==='STRIKE!'?'gold':''); if(txt==='STRIKE!'||txt==='SPARE!'){ AUD.cheer(); if(!p.cpu)buzz(p,250); } this.card(); this.lastKnocked=knocked; this.lastBefore=before; },
+    banner(txt,p.name,1.8,txt==='STRIKE!'?'gold':''); const mm=this.miis[this.pi]; if(txt==='STRIKE!'||txt==='SPARE!'){ AUD.cheer(); if(!p.cpu)buzz(p,250); mm.face('cheer',2.5); mm.play('cheer',1.2,(m,k)=>{ m.arm('R',-2.6-Math.sin(k*20)*.3,0,0); m.arm('L',-2.6+Math.sin(k*20)*.3,0,0); m.body.position.y=Math.abs(Math.sin(k*12))*.18; }); } else if(knocked===0)mm.face('sad',2.5); this.card(); this.lastKnocked=knocked; this.lastBefore=before; },
   nextTurn(){
     const fr=this.frames[this.pi][this.fi]; const k=this.lastKnocked, before=this.lastBefore; let next=false, fresh=false;
     if(this.fi<9){ if(this.roll===0&&k<10){ this.roll=1; } else next=true; }

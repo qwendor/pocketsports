@@ -42,7 +42,8 @@ button.sec:active{box-shadow:0 2px 0 #c9d6e6}
 .lbl{font-size:13px;letter-spacing:3px;text-transform:uppercase;color:#6b7c93;font-weight:900}
 #plist{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;flex:1}
 .pslot{display:flex;align-items:center;gap:12px;background:#f2f6fb;border-radius:18px;padding:12px 14px;min-height:72px;border:3px dashed #d6e1ef;color:#9aa9bd;font-size:15px}
-.pslot.on{border:3px solid var(--c);background:#fff;color:var(--ink)}
+.pslot.on{border:3px solid var(--c);background:#fff;color:var(--ink);transition:transform .12s,box-shadow .12s}
+.pslot.swing{transform:scale(1.05);box-shadow:0 0 0 5px var(--c)}
 .pslot .dot{width:42px;height:42px;border-radius:50%;background:var(--c,#d6e1ef);display:grid;place-items:center;color:#fff;font-family:Fredoka;font-size:20px;flex:none}
 .pslot .nm{font-size:18px;font-weight:900;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pslot .rd{font-size:12px;letter-spacing:2px;color:#37c95c;font-weight:900}
@@ -155,13 +156,28 @@ button.sec:active{box-shadow:0 2px 0 #c9d6e6}
 #cSwipe.on{display:block}
 #cSwipeHint{position:absolute;left:0;right:0;bottom:10px;font-size:12px;color:#6b7c93;letter-spacing:1px}
 #cFlash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
+#title.art{background-size:cover;background-position:center bottom}
+#title.art .tag{background:rgba(255,255,255,.84);border-radius:18px;padding:10px 18px}
+#logoImg{width:min(72vw,760px);max-height:38vh;object-fit:contain;filter:drop-shadow(0 14px 24px rgba(0,40,120,.35));animation:bob 3s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-8px)}}
+.tile .ic{width:clamp(80px,9vw,130px);height:clamp(80px,9vw,130px);display:grid;place-items:center}
+.tile .ic img,#intro .ic img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 8px 10px rgba(0,0,0,.18))}
+#intro .ic{width:clamp(120px,16vw,220px);height:clamp(120px,16vw,220px);display:grid;place-items:center}
+#chips{position:absolute;left:18px;bottom:18px;display:flex;gap:8px}
+.chip{display:flex;align-items:center;gap:6px;background:var(--panel);border-radius:30px;padding:6px 12px;font-size:13px;font-weight:900;box-shadow:var(--shadow);transition:transform .12s,background .12s,color .12s}
+.chip .dot{width:12px;height:12px;border-radius:50%;background:var(--c)}
+.chip.pulse{transform:scale(1.15);background:var(--c);color:#fff}
+.chip.off{opacity:.45}
+#cIcon img{width:110px;height:110px;object-fit:contain}
+#cPop{position:absolute;left:50%;top:16%;transform:translate(-50%,-50%) scale(.5);font-family:Fredoka;font-size:46px;color:var(--blue);text-shadow:0 3px 0 #fff,0 6px 14px rgba(0,0,0,.15);opacity:0;pointer-events:none;transition:transform .1s,opacity .1s;z-index:3}
+#cPop.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
 </style>
 </head>
 <body>
 <div id="host">
   <div id="ui">
     <div id="title" class="screen skybg">
-      <h1 class="logo">POCKET<span>SPORTS</span></h1>
+      <img id="logoImg" class="hidden" alt="Pocket Sports"><h1 class="logo" id="logoTxt">POCKET<span>SPORTS</span></h1>
       <div class="tag">Your phones are the controllers. Swing them like a racket, a bat, a golf club, a bowling ball or your fists. Show this screen on a TV or laptop and everybody joins by scanning a QR code.</div>
       <div class="row"><button class="big" id="bHost">HOST A GAME</button><button class="big sec" id="bCtrl">USE THIS DEVICE AS A CONTROLLER</button></div>
       <div id="titleNote" class="tag" style="font-size:14px;opacity:.7"></div>
@@ -208,6 +224,7 @@ button.sec:active{box-shadow:0 2px 0 #c9d6e6}
       <div id="golfcard" class="hidden"></div>
       <canvas id="minimap" class="hidden" width="240" height="240"></canvas>
       <div id="gauge" class="hidden"><i></i></div>
+      <div id="chips"></div>
     </div>
     <div id="banner"><div class="t"></div><div class="s"></div></div>
     <div id="results" class="screen hidden">
@@ -241,10 +258,12 @@ button.sec:active{box-shadow:0 2px 0 #c9d6e6}
       <div id="cBtns"></div>
       <div id="cSwipe"><div id="cSwipeHint">TOUCH MODE: swipe here to swing</div></div>
       <div id="cFlash"></div>
+      <div id="cPop">SWING!</div>
     </div>
     <div id="cFoot"><span id="cSensTxt">Sensitivity: normal</span><span><button class="sec" id="cSens">SENSITIVITY</button> <button class="sec" id="cTouch">TOUCH MODE</button></span></div>
   </div>
 </div>
+<script src="art.js" onerror="window.PS_ART={}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js" onerror="var s=document.createElement('script');s.src='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';document.head.appendChild(s)"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
