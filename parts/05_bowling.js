@@ -13,7 +13,7 @@ function bowlScore(fr){ // fr = array of frames, each an array of rolls; returns
 }
 SPORTS.bowling={
   name:'Bowling',icon:'🎳',players:'1-4 players',FRAMES:10,BR:.108,PR:.058,
-  how:['Hold your phone like a bowling ball. <b>Tilt</b> it left or right to aim.','Press and <b>hold</b> the button on your phone, swing your arm back and forward like a real bowl.','<b>Let go</b> of the button at the bottom of your swing to release the ball. Faster swing = faster ball.','Twist your wrist as you release to put a hook on the ball. 10 frames, highest score wins.'],
+  how:['Hold your phone like a bowling ball. <b>Turn</b> it left or right to aim (RE-CENTER on the phone resets it).','Press and <b>hold</b> the button on your phone, swing your arm back and forward like a real bowl.','<b>Let go</b> of the button at the bottom of your swing to release the ball. Faster swing = faster ball.','Twist your wrist as you release to put a hook on the ball. 10 frames, highest score wins.'],
   who:n=>n<=1?'Solo game, 10 frames':n+' players take turns, 10 frames each',
   build(players){
     const s=newScene({sky:0x2a3550,fog:false,shadow:14,sunX:6,sunY:18,sunZ:-4,hemi:.3,sun:.55,hemiSky:0x8fa3c8,hemiGround:0x222a3a});
@@ -46,7 +46,7 @@ SPORTS.bowling={
     if(p.cpu){ this.cpuAt=this.t+1.5; }
     hud('B',turnBox(p,`Frame ${this.fi+1} · ${this.roll===0?'1st':this.roll===1?'2nd':'3rd'} ball`));
     this.phones(); this.card(); },
-  phones(){ this.players.forEach((p,i)=>{ if(p.cpu)return; if(i===this.pi)phoneUI(p,{mode:'bowl',icon:'🎳',title:'Your turn',sub:'Tilt to aim. Hold the button, swing your arm, and let go to release.',btns:[{id:'hold',label:'HOLD · SWING · RELEASE',hold:1},{id:'recenter',label:'RE-CENTER AIM',sec:1}],rate:15}); else phoneUI(p,{mode:'wait',icon:'🎳',title:'Waiting',sub:this.players[this.pi].name+' is bowling. Frame '+(this.fi+1),btns:[],rate:3}); }); },
+  phones(){ this.players.forEach((p,i)=>{ if(p.cpu)return; if(i===this.pi)phoneUI(p,{mode:'bowl',icon:'🎳',title:'Your turn',sub:'Turn the phone to aim. Hold the button, swing your arm like a bowl, and let go to release.',btns:[{id:'hold',label:'HOLD · SWING · RELEASE',hold:1},{id:'recenter',label:'RE-CENTER AIM',sec:1}],rate:15}); else phoneUI(p,{mode:'wait',icon:'🎳',title:'Waiting',sub:this.players[this.pi].name+' is bowling. Frame '+(this.fi+1),btns:[],rate:3}); }); },
   card(){ const el=$('#bowlcard'); el.classList.remove('hidden'); let h='<table><tr><th></th>'+Array.from({length:10},(_,i)=>'<th>'+(i+1)+'</th>').join('')+'<th>Total</th></tr>';
     this.players.forEach((p,pi)=>{ const fr=this.frames[pi]; const sc=bowlScore(fr); h+=`<tr class="${pi===this.pi?'cur':''}"><td class="nm" style="--c:${p.color}">${esc(p.name)}</td>`;
       for(let f=0;f<10;f++){ const r=fr[f]||[]; const marks=r.map((v,i)=>{ if(v===10)return 'X'; if(i>0&&r[i-1]!==10&&r[i-1]+v===10)return '/'; if(f===9&&i===2&&r[1]!==10&&r[1]+v===10)return '/'; return v===0?'-':v; }); h+=`<td><div class="r">${marks.map(m=>'<span>'+m+'</span>').join('')||'&nbsp;'}</div><div class="t">${sc.cum[f]!=null?sc.cum[f]:'&nbsp;'}</div></td>`; }

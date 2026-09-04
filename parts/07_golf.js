@@ -7,7 +7,7 @@ const HOLES=[
 const CLUBS={driver:{v:69,ph:14,max:230},iron:{v:47.5,ph:22,max:160},wedge:{v:26.6,ph:38,max:70},putter:{v:7.2,ph:0,max:25}};
 SPORTS.golf={
   name:'Golf',icon:'⛳',players:'1-4 players',GREEN:11,
-  how:['Hold your phone like a golf club with both hands. <b>Tilt</b> it to aim (the line on the ground).','Swing the phone like a club. The club is picked for you: driver, iron, wedge or putter.','Swing gently on the green. A smooth swing flies straight, a wobbly one slices.','Water costs a stroke. 3 holes, lowest total wins.'],
+  how:['Hold your phone like a golf club with both hands. <b>Turn</b> to aim (the line on the ground).','Swing the phone like a club. The club is picked for you: driver, iron, wedge or putter.','Swing gently on the green. A smooth swing flies straight, a wobbly one slices.','Water costs a stroke. 3 holes, lowest total wins.'],
   who:n=>n<=1?'3 holes, beat par':n+' players take turns, 3 holes',
   build(players){
     this.players=players.length?players:[cpuPlayer('CPU','#8899aa')]; this.scores=this.players.map(()=>[]); this.pi=0; this.hi=0; this.t=0; this.stateT=0;
