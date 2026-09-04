@@ -22,6 +22,7 @@ const TURN=[{urls:'stun:stun.relay.metered.ca:80'},
   {urls:'turn:global.relay.metered.ca:443',username:TURN_USER,credential:TURN_PASS},
   {urls:'turns:global.relay.metered.ca:443?transport=tcp',username:TURN_USER,credential:TURN_PASS}];
 const PEER_OPTS={debug:0,config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun.cloudflare.com:3478'},...TURN]}};
+const PUBLIC_URL='https://qwendor.github.io/pocketsports/';
 const IS_CTRL=params.has('join')||params.has('ctrl')||location.hash==='#ctrl';
 
 /* ---------------- audio (host) ---------------- */
@@ -73,7 +74,7 @@ async function buildJoinInfo(){
   // Prefer the LAN address reported by serve.py so the QR works even if this page was opened as localhost.
   let base=location.origin+location.pathname;
   if(location.protocol!=='file:'&&/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(location.hostname)){ try{ const r=await fetch('/ip',{cache:'no-store'}); if(r.ok){ const j=await r.json(); if(j.ips&&j.ips[0]) base='https://'+j.ips[0]+':'+j.https+'/'; } }catch(e){} }
-  else { $('#joinurl').textContent='Phones cannot reach a file:// page. Run serve.py and open the https address it prints.'; $('#qr').innerHTML=''; joinBase=null; return; }
+  else base=PUBLIC_URL; // opened as a file: phones join through the public site (PeerJS signalling is in the cloud)
   if(/^http:\/\/(localhost|127\.)/.test(base)) base=base.replace(/\/$/,'')+'/';
   joinBase=base;
   const url=base+'?join='+NET.code;

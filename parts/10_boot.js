@@ -19,7 +19,7 @@ if(TEST){
 function boot(){
   if(IS_CTRL){ ctrlInit(); return; }
   initGL(); showScreen('title');
-  if(location.protocol==='file:')$('#titleNote').textContent='Tip: run serve.py and open the https address it prints, so phones can scan the QR code.';
+  if(location.protocol==='file:')$('#titleNote').textContent='Phones will join through '+PUBLIC_URL.replace(/^https?:\/\//,'')+' (needs internet).';
   if(params.has('host')||params.has('instant'))hostStart();
   if(params.has('instant')&&TEST){ const n=parseInt(params.get('n')||'1'); for(let i=0;i<n;i++)window.game.addFake(); startSport(params.get('sport')||'tennis'); }
   requestAnimationFrame(frame);
