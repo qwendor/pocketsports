@@ -7,7 +7,14 @@ a bowling ball, a baseball bat, a golf club, or punch with it.
 Five sports: **Tennis, Bowling, Home Run Derby, Golf, Boxing**. 1 to 4 phones. Computer
 opponents fill in when you play alone.
 
-## Start a party
+## Play online (easiest)
+
+The game is live at **https://qwendor.github.io/pocketsports/**. Open it on the laptop or TV,
+click HOST A GAME, and phones scan the QR code (or open the same address and type the room code).
+No setup, no certificate warning, and phones can be on any network. To update the live site after
+editing: `python build.py`, then `git add -A && git commit -m "..." && git push`.
+
+## Start a party on your own Wi-Fi (offline option)
 
 1. Double-click `serve.py` (or run `python serve.py`). It prints something like
    `https://10.0.0.21:4235/`.
