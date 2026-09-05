@@ -1,5 +1,5 @@
 /* ============================== BASKETBALL (shootaround) + 3-POINT CONTEST ============================== */
-const BB_CFG={setPitch:32,setTime:.12,snapRate:-3.5,releasePitchMax:55,speedBase:3.0,snapGain:.5,handGain:.8,minSpeed:5,maxSpeed:11.5,aimAssist:.65,speedAssist:.85,snapWindow:.08,ballR:.12,rimR:.225,rimH:3.05,boardZ:-.38,minElev:36,maxElev:60};
+const BB_CFG={setPitch:22,setTime:.1,snapRate:-2.4,releasePitchMax:60,speedBase:3.0,snapGain:.5,handGain:.8,minSpeed:5,maxSpeed:11.5,aimAssist:.85,speedAssist:.93,snapWindow:.08,ballR:.12,rimR:.225,rimH:3.05,boardZ:-.38,minElev:42,maxElev:56};
 const BB_SPOTS=[[0,4.6,2],[-3.2,3.6,2],[3.2,3.6,2],[-4.6,1.6,2],[4.6,1.6,2],[0,6.9,3],[-4.9,4.9,3],[4.9,4.9,3]]; // x, z (distance from the hoop toward the shooter), points
 const BB_RACKS=[[-6.4,1.6],[-4.8,4.9],[0,6.95],[4.8,4.9],[6.4,1.6]];
 const BBASE={

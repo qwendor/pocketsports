@@ -4,7 +4,7 @@ A Wii Sports style party game for the browser. The game runs on a laptop or TV s
 everybody plays with their **phone as the motion controller**: swing it like a tennis racket,
 a bowling ball, a baseball bat, a golf club, or punch with it.
 
-Nine modes: **Tennis, Bowling, Home Run Derby, Golf, Swordplay, 3-Point Contest, Tanks, Beat Shake, Dance Off**, plus a Controller Lab. 1 to 4 phones. Computer
+Twelve modes: **Tennis, Ping Pong, Volleyball, Bowling, Home Run Derby, Golf, Swordplay, 3-Point Contest, Tanks, Beat Shake, Dance Off, Fruit Slice**, plus a Controller Lab. 1 to 4 phones. Computer
 opponents fill in when you play alone.
 
 ## Play online (easiest)
@@ -66,7 +66,7 @@ same object: `ctrl.q`, `ctrl.axis()` (where the phone points), `ctrl.normal()` (
   true positional tracking; this gives believable short pushes and pulls, not room-scale tracking.
 - Standard grip: portrait, top edge pointing at the TV, screen up (like a TV remote). Roll the
   phone 90 degrees to hold it like a racket handle.
-- All tuning lives in `MOTION_CFG` in `parts/02_core.js`; per-sport numbers in `TENNIS_CFG`,
+- All tuning lives in `MOTION_CFG` in `parts/02_core.js`; per-sport numbers in `TENNIS_P`/`PINGPONG_P`, `VB_CFG`,
   `BOWL_CFG`, `GOLF_CFG`, `BASE_CFG`, `BOX_CFG`, `BB_CFG`.
 - **Controller Lab** (last tile in the sport menu) shows a 3D phone and racket that follow each
   connected phone, with pitch/yaw/roll, quaternion, rates, latency, stationary and quality readouts,
@@ -91,4 +91,4 @@ Enter / Esc / arrow keys move through the menus. Esc during a game returns to th
 Open `http://localhost:4236/?test&host` and use the `game` object in the console:
 `game.addFake('Bot')`, `game.start('tennis')`, `game.swing(0, 1.2)`, `game.btn(0,'hold',1)`,
 `game.orient(0, 0, 15)`, `game.step(60)`, `game.state()`. Keys in test mode: `1`-`4` swing for
-slots (tennis), `Space` swing/throw, `A`/`D` aim, `J`/`H`/`U` punch and `B` block (boxing).
+slots (tennis), `Space` swing/throw, `A`/`D` aim, `Space` also swings in Volleyball.

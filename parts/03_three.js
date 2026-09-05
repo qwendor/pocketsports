@@ -5,10 +5,10 @@ function initGL(){
   if(R.renderer)return;
   const r=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'}); r.setPixelRatio(Math.min(devicePixelRatio,2)); r.shadowMap.enabled=true; r.shadowMap.type=THREE.PCFSoftShadowMap; r.outputEncoding=THREE.sRGBEncoding;
   r.domElement.id='gl'; $('#host').insertBefore(r.domElement,$('#ui')); R.renderer=r;
-  R.cam=new THREE.PerspectiveCamera(45,1,.1,2500);
+  R.cam=new THREE.PerspectiveCamera(45,16/9,.1,2500);
   resize(); window.addEventListener('resize',resize);
 }
-function resize(){ if(!R.renderer)return; const w=innerWidth,h=innerHeight; R.renderer.setSize(w,h,false); R.cam.aspect=w/h; R.cam.updateProjectionMatrix(); }
+function resize(){ if(!R.renderer)return; const w=innerWidth||1280,h=innerHeight||720; if(!innerWidth||!innerHeight)return; R.renderer.setSize(w,h,false); R.cam.aspect=w/h; R.cam.updateProjectionMatrix(); }
 function newScene(o={}){
   initGL(); const s=new THREE.Scene(); s.background=new THREE.Color(o.sky||0x8fd3ff); if(o.fog!==false)s.fog=new THREE.Fog(o.sky||0x8fd3ff,o.fogNear||60,o.fogFar||220);
   const hemi=new THREE.HemisphereLight(o.hemiSky||0xcfe9ff,o.hemiGround||0x6a8a4a,o.hemi!=null?o.hemi:.75); s.add(hemi);

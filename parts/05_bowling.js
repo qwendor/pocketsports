@@ -1,6 +1,6 @@
 /* ============================== BOWLING ============================== */
 const PINSPOTS=[[0,0],[-.1524,-.264],[.1524,-.264],[-.3048,-.528],[0,-.528],[.3048,-.528],[-.4572,-.792],[-.1524,-.792],[.1524,-.792],[.4572,-.792]];
-const BOWL_CFG={rest:[.3,-.35,.25],speedGain:1.25,minSpeed:4,maxSpeed:11.5,aimMaxDeg:10,autoReleaseSpeed:2.6,autoReleaseY:1.25,spinGain:1/12,aimBlend:.5};
+const BOWL_CFG={rest:[.3,-.35,.25],speedGain:1.25,minSpeed:4,maxSpeed:11.5,aimMaxDeg:10,autoReleaseSpeed:2.6,autoReleaseY:1.25,spinGain:1/24,spinDead:1.5,spinMax:.5,aimBlend:.5};
 function bowlScore(fr){ // fr = array of frames, each an array of rolls; returns {cum:[...], total}
   const rolls=[]; fr.forEach((f,i)=>f.forEach(r=>{rolls.push(r);}));
   const cum=[]; let total=0, k=0;
@@ -67,8 +67,8 @@ SPORTS.bowling={
       if(-hv.z>sp*.5&&sp>this.peak){ this.peak=sp; this.vPeak.copy(hv); }
       if(this.stateT>.5&&this.peak>K.autoReleaseSpeed&&sp<this.peak*.92&&this.tr.pos.y<K.autoReleaseY){ this.throwTracked(p,this.vPeak); } } },
   throwTracked(p,vel){ if(this.released)return; const c=p.ctrl, K=BOWL_CFG; const m=this.miis[this.pi]; const hv=vel?_bw2.copy(vel):ctrlVelWorld(m,c,_bw2).add(this.tr.vel); const sp=Math.hypot(hv.x,hv.z);
-    const speed=clamp(sp*K.speedGain,K.minSpeed,K.maxSpeed); const swingAng=sp>.5?clamp(Math.atan2(hv.x,-hv.z)*180/Math.PI,-K.aimMaxDeg,K.aimMaxDeg):this.aim*4.5; const ang=lerp(this.aim*4.5,swingAng,K.aimBlend*.4);
-    const ax=c.axis(); const spin=clamp(-c.w.dot(ax)*K.spinGain,-1,1); // wrist twist about the pointing axis hooks the ball
+    const speed=clamp(sp*K.speedGain,K.minSpeed,K.maxSpeed); const swingAng=sp>.5?clamp(Math.atan2(hv.x,-hv.z)*180/Math.PI,-K.aimMaxDeg,K.aimMaxDeg):this.aim*4.5; const ang=lerp(this.aim*4.5,swingAng,K.aimBlend*.25);
+    const ax=c.axis(); const tw=c.w.dot(ax); const spin=Math.abs(tw)<K.spinDead?0:clamp(-(tw-Math.sign(tw)*K.spinDead)*K.spinGain,-K.spinMax,K.spinMax); // a deliberate wrist twist hooks the ball a little
     this.released=true; if(m.ballMesh)m.ballMesh.visible=false; this.launch({speed,spin,ang,x:clamp(this.tr.pos.x,-.35,.35)}); },
   // ---- legacy path (CPU, touch mode): canned approach + release ----
   startHold(){ if(this.hold)return; this.hold=true; this.holdT=0; const m=this.miis[this.pi]; m.play('back',.9,(mii,k)=>{ mii.arm('R',easeOut(k)*1.35,0,0); mii.g.position.z=2.6-easeOut(k)*1.4; mii.body.rotation.x=.12*k; }); },
@@ -93,7 +93,7 @@ SPORTS.bowling={
   physics(dt){ const STEP=1/240; let n=Math.min(60,Math.ceil(dt/STEP)); const h=dt/n; for(let i=0;i<n;i++)this.step(h); },
   step(h){
     const b=this.ball, BR=this.BR, PR=this.PR;
-    if(b.active){ if(!b.gutter){ if(b.z<-7)b.vx+=b.spin*.42*h; b.vx*=(1-.02*h); b.vz*=(1-.015*h); }
+    if(b.active){ if(!b.gutter){ if(b.z<-7)b.vx+=b.spin*.3*h; b.vx*=(1-.02*h); b.vz*=(1-.015*h); }
       b.x+=b.vx*h; b.z+=b.vz*h;
       if(!b.gutter&&Math.abs(b.x)>.525+BR*.35){ b.gutter=true; b.x=Math.sign(b.x)*.66; b.vx=0; b.y=-.06; b.spin=0; AUD.thud(); }
       if(b.z<-19.9||Math.hypot(b.vx,b.vz)<.15){ b.active=false; this.ballM.visible=false; }

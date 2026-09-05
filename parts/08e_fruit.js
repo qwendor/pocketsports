@@ -1,9 +1,9 @@
 /* ============================== FRUIT SLICE (point the phone, sweep through fruit) ============================== */
-const FR_CFG={time:60,aimYawDeg:26,aimPitchDeg:18,sliceSpeed:5,trailN:14,bombPenalty:8,gravity:11,spawnMin:.55,spawnMax:1.1};
-const FR_TYPES=[{n:'apple',c:0xe0313f,r:.42,pts:1,w:.34},{n:'orange',c:0xff9f1c,r:.45,pts:1,w:.3},{n:'lime',c:0x7ed957,r:.36,pts:1,w:.2},{n:'melon',c:0x2e8b3d,r:.62,pts:2,w:.1,inner:0xff5a7a},{n:'peach',c:0xffb37a,r:.44,pts:1,w:.2},{n:'bomb',c:0x1c2430,r:.42,pts:0,w:.16,bomb:true}];
+const FR_CFG={time:60,aimYawDeg:26,aimPitchDeg:18,sliceSpeed:5,trailN:14,bombPenalty:8,gravity:11,spawnMin:.7,spawnMax:1.3,heatMax:.45,coolSpeed:2.5,coolTime:.3};
+const FR_TYPES=[{n:'apple',c:0xe0313f,r:.42,pts:1,w:.34},{n:'orange',c:0xff9f1c,r:.45,pts:1,w:.3},{n:'lime',c:0x7ed957,r:.36,pts:1,w:.2},{n:'melon',c:0x2e8b3d,r:.62,pts:2,w:.1,inner:0xff5a7a},{n:'peach',c:0xffb37a,r:.44,pts:1,w:.2},{n:'bomb',c:0x1c2430,r:.42,pts:0,w:.24,bomb:true}];
 SPORTS.fruit={
   name:'Fruit Slice',icon:'🍉',players:'1-4 players',
-  how:['Point your phone at the screen: your blade follows it, like a laser pointer.','Fruit flies up from the bottom. Sweep the blade through it fast to slice it. Slow pokes do nothing.','Slice several in one sweep for a combo bonus. Slicing a <b>bomb</b> costs points and stuns your blade.','60 seconds, everyone slices at once. Most points wins.'],
+  how:['Point your phone at the screen: your blade follows it, like a laser pointer.','Fruit flies up from the bottom. Sweep the blade through it fast to slice it. Slow pokes do nothing.','Real slashes, not waving: the blade goes dull (grey) after half a second of constant motion and needs a short pause to sharpen again.','Slice several in one sweep for a combo bonus. Slicing a <b>bomb</b> costs points. 60 seconds, most points wins.'],
   who:n=>n<=1?'Solo, 60 seconds':n+' blades at once, 60 seconds',
   build(players){
     const s=newScene({sky:0x1b2233,fog:false,shadow:0,sunX:2,sunY:10,sunZ:14,hemi:.45,sun:1.0,hemiSky:0xb0c8ff,hemiGround:0x2a2040});
@@ -12,7 +12,7 @@ SPORTS.fruit={
     const board=box(20,.4,2,0x5a3a1a,{cast:false}); board.position.set(0,-1.2,0); s.add(board);
     this.blades=this.players.map(p=>{ const col=new THREE.Color(p.color); const trail=[]; for(let i=0;i<FR_CFG.trailN;i++){ const m=sph(.12*(1-i/FR_CFG.trailN)+.03,p.color,{m:{emissive:col.clone().multiplyScalar(.6),transparent:true,opacity:1-i/FR_CFG.trailN},cast:false,recv:false},8); m.visible=false; s.add(m); trail.push(m); }
       const tip=mesh(new THREE.RingGeometry(.16,.24,24),p.color,{m:{emissive:col.clone().multiplyScalar(.7),side:THREE.DoubleSide},cast:false,recv:false}); s.add(tip);
-      return {p,trail,tip,pos:new THREE.Vector3(0,4,0),prev:new THREE.Vector3(0,4,0),hist:[],score:0,combo:0,comboT:0,stun:0,sliced:0,bombs:0,cpuT:new THREE.Vector3(0,4,0)}; });
+      return {p,trail,tip,pos:new THREE.Vector3(0,4,0),prev:new THREE.Vector3(0,4,0),hist:[],score:0,combo:0,comboT:0,stun:0,sliced:0,bombs:0,cpuT:new THREE.Vector3(0,4,0),heat:0,dull:false,coolT:0,col}; });
     camSet(V3(0,4,13),V3(0,4,0)); this.hud(); this.phones(); AUD.init();
   },
   phones(){ this.players.forEach(p=>{ if(!p.cpu)phoneUI(p,{mode:'fruit',icon:'🍉',title:'Slice!',sub:'Point at the screen and sweep the blade through the fruit. Avoid the bombs.',btns:[{id:'recenter',label:'RECENTER',sec:1}],rate:3}); }); },
@@ -30,11 +30,14 @@ SPORTS.fruit={
     // blades
     this.blades.forEach(b=>{ const p=b.p; b.prev.copy(b.pos); b.stun=Math.max(0,b.stun-dt); b.comboT-=dt; if(b.comboT<=0&&b.combo>=3){ this.comboBonus(b); } if(b.comboT<=0)b.combo=0;
       if(!p.cpu&&tracked(p)){ const c=p.ctrl; const sx=clamp(-c.yaw*180/Math.PI/K.aimYawDeg,-1,1), sy=clamp(c.pitch*180/Math.PI/K.aimPitchDeg,-1,1); const tf=Math.tan(R.cam.fov*Math.PI/360); const dir=_fr1.set(sx*tf*R.cam.aspect,sy*tf,-1).applyQuaternion(R.cam.quaternion).normalize(); const k=-R.cam.position.z/dir.z; if(k>0&&isFinite(k)){ b.pos.copy(R.cam.position).addScaledVector(dir,k); } }
-      else if(p.cpu){ const f=this.fruit.filter(f=>f.alive&&!f.tp.bomb&&f.vel.y<4).sort((a,c)=>a.pos.y-c.pos.y).pop(); if(f&&this.state==='play'){ b.cpuT.copy(f.pos); } const to=_fr1.copy(b.cpuT).sub(b.pos); const d=to.length(); if(d>.1)b.pos.addScaledVector(to.normalize(),Math.min(d,7*dt)); }
+      else if(p.cpu){ const f=this.fruit.filter(f=>f.alive&&!f.tp.bomb&&f.vel.y<4).sort((a,c)=>a.pos.y-c.pos.y).pop(); if(f&&this.state==='play'&&!b.dull){ b.cpuT.copy(f.pos); } const to=_fr1.copy(b.cpuT).sub(b.pos); const d=to.length(); if(d>.1&&!b.dull)b.pos.addScaledVector(to.normalize(),Math.min(d,7*dt)); }
       b.vel=b.pos.distanceTo(b.prev)/Math.max(dt,1e-3);
+      // heat: continuous fast waving dulls the blade; stopping briefly sharpens it
+      if(b.vel>K.coolSpeed){ b.heat+=dt; b.coolT=0; } else { b.coolT+=dt; if(b.coolT>K.coolTime){ b.heat=0; b.dull=false; } } if(b.heat>K.heatMax)b.dull=true;
+      const dullCol=0x777788; b.tip.material.color.setHex(b.dull?dullCol:b.col.getHex()); b.tip.material.emissive.setHex(b.dull?0x222233:b.col.clone().multiplyScalar(.7).getHex()); b.trail.forEach(m=>{ m.material.color.setHex(b.dull?dullCol:b.col.getHex()); });
       b.hist.unshift(b.pos.clone()); if(b.hist.length>K.trailN)b.hist.pop(); b.trail.forEach((m,i)=>{ const h=b.hist[i]; m.visible=!!h&&b.vel>1.5; if(h)m.position.copy(h); }); b.tip.position.copy(b.pos); b.tip.rotation.y=this.t*4; b.tip.visible=b.stun<=0||Math.floor(this.t*12)%2===0;
       // slicing: the blade segment for this frame against every fruit
-      if(this.state==='play'&&b.vel>=K.sliceSpeed&&b.stun<=0){ this.fruit.forEach(f=>{ if(!f.alive)return; const d=this.segDist(b.prev,b.pos,f.pos); if(d<f.tp.r+.12){ this.slice(f,b); } }); } });
+      if(this.state==='play'&&b.vel>=K.sliceSpeed&&b.stun<=0&&!b.dull){ this.fruit.forEach(f=>{ if(!f.alive)return; const d=this.segDist(b.prev,b.pos,f.pos); if(d<f.tp.r+.12){ this.slice(f,b); } }); } });
     // fruit physics
     this.fruit=this.fruit.filter(f=>{ if(!f.alive){ return false; } f.vel.y-=K.gravity*dt; f.pos.addScaledVector(f.vel,dt); f.m.position.copy(f.pos); f.m.rotation.x+=f.spin.x*dt; f.m.rotation.y+=f.spin.y*dt; f.m.rotation.z+=f.spin.z*dt; if(f.m.userData.spark)f.m.userData.spark.visible=Math.floor(this.t*10)%2===0; if(f.pos.y<-2.5){ R.scene.remove(f.m); return false; } return true; });
     this.bits=this.bits.filter(m=>{ m.userData.t+=dt; m.userData.v.y-=K.gravity*dt; m.position.addScaledVector(m.userData.v,dt); m.rotation.x+=m.userData.s.x*dt; m.rotation.z+=m.userData.s.z*dt; if(m.material&&m.material.transparent)m.material.opacity=Math.max(0,1-m.userData.t*1.5); if(m.position.y<-3||m.userData.t>2){ R.scene.remove(m); return false; } return true; });
