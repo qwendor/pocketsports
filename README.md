@@ -4,7 +4,7 @@ A Wii Sports style party game for the browser. The game runs on a laptop or TV s
 everybody plays with their **phone as the motion controller**: swing it like a tennis racket,
 a bowling ball, a baseball bat, a golf club, or punch with it.
 
-Seven sports: **Tennis, Bowling, Home Run Derby, Golf, Boxing, Basketball, 3-Point Contest**, plus a Controller Lab. 1 to 4 phones. Computer
+Nine modes: **Tennis, Bowling, Home Run Derby, Golf, Swordplay, 3-Point Contest, Tanks, Beat Shake, Dance Off**, plus a Controller Lab. 1 to 4 phones. Computer
 opponents fill in when you play alone.
 
 ## Play online (easiest)

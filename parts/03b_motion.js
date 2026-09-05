@@ -38,10 +38,10 @@ function toLocal(v,out){ return (out||new THREE.Vector3()).copy(v).applyQuaterni
 const _rig1=new THREE.Vector3(), _rig2=new THREE.Vector3();
 const _rigQ=new THREE.Quaternion(), _rigD=new THREE.Vector3(), _rigZ=new THREE.Vector3(0,0,1);
 const _rigI=new THREE.Quaternion();
-function rigHand(mii,ctrl,rest,posGain,follow,maxLen){ const K=MOTION_CFG; const g=posGain!=null?posGain:K.posGain; const f=follow!=null?follow:1;
+function rigHand(mii,ctrl,rest,posGain,follow,maxLen,side){ const K=MOTION_CFG; const g=posGain!=null?posGain:K.posGain; const f=follow!=null?follow:1;
   ctrl.axis(_rigD).applyQuaternion(FLIP); _rigQ.setFromUnitVectors(_rigZ,_rigD); if(f<1)_rigQ.slerp(_rigI,1-f); // arm swing = the rotation that takes "pointing at the TV" to the current pointing direction (no roll)
   _rig1.copy(rest).applyQuaternion(_rigQ); _rig2.copy(ctrl.pos).multiplyScalar(g).applyQuaternion(FLIP); _rig1.add(_rig2); // hand offset from the shoulder (local)
-  return mii.hold(_rig1,ctrl.qLocal,'R',maxLen); }
+  return mii.hold(_rig1,ctrl.qLocal,side||'R',maxLen); }
 // controller-frame velocity (player-relative) -> world space for a Mii facing any direction
 function ctrlVelWorld(mii,ctrl,out){ return (out||new THREE.Vector3()).copy(ctrl.v).applyQuaternion(FLIP).applyQuaternion(mii.g.quaternion); }
 /* Tracks the world position/velocity of a point on an object between frames (for racket heads, gloves, club heads). */
