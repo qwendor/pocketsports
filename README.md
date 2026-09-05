@@ -4,7 +4,7 @@ A Wii Sports style party game for the browser. The game runs on a laptop or TV s
 everybody plays with their **phone as the motion controller**: swing it like a tennis racket,
 a bowling ball, a baseball bat, a golf club, or punch with it.
 
-Five sports: **Tennis, Bowling, Home Run Derby, Golf, Boxing**. 1 to 4 phones. Computer
+Seven sports: **Tennis, Bowling, Home Run Derby, Golf, Boxing, Basketball, 3-Point Contest**, plus a Controller Lab. 1 to 4 phones. Computer
 opponents fill in when you play alone.
 
 ## Play online (easiest)
@@ -47,6 +47,32 @@ netsh advfirewall firewall add rule name="Pocket Sports" dir=in action=allow pro
 To avoid the certificate warning entirely, host `index.html` on any https site (for example GitHub
 Pages, like the other games). Then phones on any network can join, and the metered.ca TURN relay
 already configured in the file relays the connection when needed.
+
+
+## Motion controller (how the phone is tracked)
+
+The phone is a tracked controller, not a swing button. `MotionInput` on the phone turns the
+orientation sensors into a quaternion (gimbal-lock free), removes the heading measured at
+CALIBRATE so "forward" is wherever the phone pointed at the TV, and adds angular velocity, linear
+acceleration and a bounded velocity/position estimate. It sends a compact packet 30 times a second.
+The host (`RemoteCtrl`) dead-reckons with the angular velocity for the time the packet spent in
+flight and applies adaptive smoothing (heavy when still, light when moving). Every sport reads the
+same object: `ctrl.q`, `ctrl.axis()` (where the phone points), `ctrl.normal()` (screen normal),
+`ctrl.w`, `ctrl.a`, `ctrl.v`, `ctrl.pos`, `ctrl.stationary`, `ctrl.quality`.
+
+- Real tracking: rotation, angular velocity, acceleration.
+- Estimated: velocity and position (integrated acceleration with decay, zero-velocity updates when
+  the phone is still, and a spring back to neutral, capped to a 0.6 m volume). Phones cannot do
+  true positional tracking; this gives believable short pushes and pulls, not room-scale tracking.
+- Standard grip: portrait, top edge pointing at the TV, screen up (like a TV remote). Roll the
+  phone 90 degrees to hold it like a racket handle.
+- All tuning lives in `MOTION_CFG` in `parts/02_core.js`; per-sport numbers in `TENNIS_CFG`,
+  `BOWL_CFG`, `GOLF_CFG`, `BASE_CFG`, `BOX_CFG`, `BB_CFG`.
+- **Controller Lab** (last tile in the sport menu) shows a 3D phone and racket that follow each
+  connected phone, with pitch/yaw/roll, quaternion, rates, latency, stationary and quality readouts,
+  and CALIBRATE / RECENTER / RESET POSITION buttons on the phone.
+- Phones without sensors (or desktops) fall back to touch mode: drag on the pad to aim the
+  controller, flick to swing.
 
 ## Files
 

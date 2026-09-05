@@ -23,6 +23,23 @@ const TURN=[{urls:'stun:stun.relay.metered.ca:80'},
   {urls:'turns:global.relay.metered.ca:443?transport=tcp',username:TURN_USER,credential:TURN_PASS}];
 const PEER_OPTS={debug:0,config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun.cloudflare.com:3478'},...TURN]}};
 const PUBLIC_URL='https://qwendor.github.io/pocketsports/';
+/* One place for every motion-tracking tuning value (phone + host use the same object). */
+const MOTION_CFG={
+  sendHz:30,             // controller packets per second phone -> host
+  predictMax:.08,        // s: max dead-reckoning with angular velocity to hide network delay
+  rotSmoothMin:.28,      // host orientation smoothing per 60 Hz frame when still (lower = smoother, laggier)
+  rotSmoothGain:.22,     // extra smoothing weight per rad/s of angular speed (fast motion -> no lag)
+  posSmoothMin:.2, posSmoothGain:.5,
+  posGain:1.0,           // metres of hand travel per metre of estimated phone travel
+  maxRange:.6,           // m: bounded interaction volume for the estimated position
+  maxVel:6,              // m/s cap for the estimated velocity
+  accelGain:1.0, accelDeadZone:.35, // m/s^2 ignored as noise
+  velDecay:2.2,          // 1/s: velocity bleeds away (prevents integration drift)
+  velDecayStill:14,      // 1/s: fast zero-velocity update while stationary
+  posSpring:1.6,         // 1/s: estimated position relaxes back to the neutral hand position
+  stationaryAccel:.6, stationaryRot:.35, stationaryTime:.15, // thresholds + dwell for "held still"
+  swingAccel:7.5, swingRot:260, swingWindow:90, swingCooldown:300, // secondary gesture layer (m/s^2, deg/s, ms, ms)
+};
 const IS_CTRL=params.has('join')||params.has('ctrl')||location.hash==='#ctrl';
 
 /* ---------------- audio (host) ---------------- */
@@ -85,7 +102,7 @@ async function buildJoinInfo(){
 
 /* ---------------- players ---------------- */
 function mkPlayer(slot,name,conn,tok){
-  return {slot,name,color:COLORS[slot],cname:CNAMES[slot],conn,tok,online:true,ready:false,orient:{a:0,b:0,g:0},btn:{},s0:null,owd:.03,rtt:0,lastUI:null,score:0,pingT:0,lastSeen:now(),hasMotion:false};
+  return {ctrl:null,slot,name,color:COLORS[slot],cname:CNAMES[slot],conn,tok,online:true,ready:false,orient:{a:0,b:0,g:0},btn:{},s0:null,owd:.03,rtt:0,lastUI:null,score:0,pingT:0,lastSeen:now(),hasMotion:false};
 }
 function send(p,m){ if(p&&p.conn&&p.conn.open){ try{p.conn.send(m);}catch(e){} } if(p&&p.fake)p.inbox.push(m); }
 function sendAll(m){ G.players.forEach(p=>send(p,m)); }
@@ -116,6 +133,8 @@ function onCtrlMsg(c,m){
       const sw={start,age:now()-start,raw:m.p||0,pw:clamp((m.p||0)/20,.3,1.6),dx:m.dx||0,dy:m.dy||0,dz:m.dz||0,ra:m.ra||0,rb:m.rb||0,rg:m.rg||0,b:m.b||0,g:m.g||0,touch:!!m.touch};
       onSwing(p,sw); break; }
     case 'o': p.orient={a:m.a||0,b:m.b||0,g:m.g||0}; if(G.sport&&G.sport.onOrient)G.sport.onOrient(p); break;
+    case 'm': ctrlOf(p).packet(m.d); p.hasMotion=true; break;
+    case 'cal': ctrlOf(p).calibrated=true; toast(p.name+' calibrated'); AUD.tick(); if(G.sport&&G.sport.onCalibrate)G.sport.onCalibrate(p); break;
     case 'b': p.btn[m.id]=!!m.d; onBtn(p,m.id,!!m.d,m); break;
     case 'pong': { const r=now()-m.hs; p.rtts=(p.rtts||[]).concat([r]).slice(-6); p.rtt=Math.min(...p.rtts); p.owd=clamp(p.rtt/2,0,.15); break; }
     case 'motion': p.hasMotion=!!m.ok; renderLobby(); break;
@@ -197,7 +216,7 @@ $('#bAgain').onclick=()=>startSport(G.sportId); $('#bResMenu').onclick=showMenu;
 function frame(){ requestAnimationFrame(frame); if(G.manual)return; tick(); }
 function tick(dtOverride){
   const t=now(); let dt=dtOverride!=null?dtOverride:(G.lastFrame?t-G.lastFrame:1/60); G.lastFrame=t; dt=clamp(dt,0,.1);
-  G.players.forEach(p=>{ if(t-p.pingT>2&&!G.manual){ p.pingT=t; send(p,{t:'ping',hs:t}); } });
+  G.players.forEach(p=>{ if(t-p.pingT>2&&!G.manual){ p.pingT=t; send(p,{t:'ping',hs:t}); } if(p.ctrl)p.ctrl.update(dt); });
   if(G.state==='play'&&G.sport){ G.sport.update(dt); render(); }
   if(TEST){ fpsN++; if(t-fpsT>1){ $('#fps').textContent=fpsN+' fps'; fpsN=0; fpsT=t; } }
 }

@@ -174,6 +174,14 @@ button.sec:active{box-shadow:0 2px 0 #c9d6e6}
 #cIcon img{width:110px;height:110px;object-fit:contain}
 #cPop{position:absolute;left:50%;top:16%;transform:translate(-50%,-50%) scale(.5);font-family:Fredoka;font-size:46px;color:var(--blue);text-shadow:0 3px 0 #fff,0 6px 14px rgba(0,0,0,.15);opacity:0;pointer-events:none;transition:transform .1s,opacity .1s;z-index:3}
 #cPop.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#cCal{position:absolute;inset:0;background:var(--panel);z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;text-align:center}
+#cCal .ph{width:70px;height:130px;border-radius:14px;border:4px solid var(--ink);position:relative;animation:phoneTilt 2.4s ease-in-out infinite}
+#cCal .ph:after{content:'';position:absolute;left:50%;top:-16px;width:0;height:0;border:8px solid transparent;border-bottom-color:var(--blue);transform:translateX(-50%)}
+@keyframes phoneTilt{0%,100%{transform:rotate(-10deg)}50%{transform:rotate(10deg)}}
+#cCal h3{margin:0;font-size:24px}#cCal p{margin:0;font-size:14px;color:#456;max-width:300px;line-height:1.4}
+#lab{position:absolute;left:18px;top:64px;background:rgba(20,28,40,.86);color:#dfe8f5;border-radius:14px;padding:10px 14px;font:600 12px/1.45 ui-monospace,Consolas,monospace;min-width:260px;pointer-events:none;white-space:pre}
+#lab b{color:#ffc233}#lab .ok{color:#37c95c}#lab .bad{color:#ff5a5f}
+#lab .row{display:flex;gap:10px;margin-bottom:6px}#lab .row>div{flex:1}
 </style>
 </head>
 <body>
@@ -203,7 +211,7 @@ button.sec:active{box-shadow:0 2px 0 #c9d6e6}
           </div>
         </div>
       </div>
-      <div class="hint" id="lobbyHint">Waiting for phones. Player 1's phone can press <b>CHOOSE A SPORT</b>, or press <span class="kbd">Enter</span> here.</div>
+      <div class="hint" id="lobbyHint">Waiting for phones. On each phone: point it at this screen and tap <b>CALIBRATE</b>, then swing to test. Player 1's phone can press <b>CHOOSE A SPORT</b>, or press <span class="kbd">Enter</span> here.</div>
     </div>
     <div id="menu" class="screen skybg hidden">
       <h2>PICK A SPORT</h2>
@@ -229,6 +237,7 @@ button.sec:active{box-shadow:0 2px 0 #c9d6e6}
       <canvas id="minimap" class="hidden" width="240" height="240"></canvas>
       <div id="gauge" class="hidden"><i></i></div>
       <div id="chips"></div>
+      <div id="lab" class="hidden"></div>
     </div>
     <div id="banner"><div class="t"></div><div class="s"></div></div>
     <div id="results" class="screen hidden">
@@ -262,9 +271,10 @@ button.sec:active{box-shadow:0 2px 0 #c9d6e6}
       <div id="cBtns"></div>
       <div id="cSwipe"><div id="cSwipeHint">TOUCH MODE: swipe here to swing</div></div>
       <div id="cFlash"></div>
+      <div id="cCal" class="hidden"><div class="ph"></div><h3>Calibrate</h3><p>Hold the phone flat like a TV remote, screen up, with the top edge pointing at the TV. Then tap CALIBRATE. Tilting the phone up and down, left and right, and rolling your wrist will move your hand on screen.</p><button class="big" id="cCalBtn">CALIBRATE</button><button class="sec" id="cCalSkip">LATER</button></div>
       <div id="cPop">SWING!</div>
     </div>
-    <div id="cFoot"><span id="cSensTxt">Sensitivity: normal</span><span><button class="sec" id="cMenu">MENU</button> <button class="sec" id="cSens">SENSITIVITY</button> <button class="sec" id="cTouch">TOUCH MODE</button></span></div>
+    <div id="cFoot"><span id="cSensTxt">Sensitivity: normal</span><span><button class="sec" id="cMenu">MENU</button> <button class="sec" id="cRecenter">RECENTER</button> <button class="sec" id="cSens">SENSITIVITY</button> <button class="sec" id="cTouch">TOUCH MODE</button></span></div>
   </div>
 </div>
 <script src="art.js" onerror="window.PS_ART={}"></script>

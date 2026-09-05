@@ -45,6 +45,9 @@ function crowd(s,spots,n=60){ const geo=new THREE.SphereGeometry(.28,8,6); const
 function stand(s,x,y,z,w,rot=0,rows=4,color=0x9fb3c8){ const g=new THREE.Group(); for(let i=0;i<rows;i++){ const b=box(w,1,2,i%2?color:0x8ea3b8,{cast:false}); b.position.set(0,.5+i,-i*2); g.add(b); } g.position.set(x,y,z); g.rotation.y=rot; s.add(g); return g; }
 
 /* ---- Mii ---- */
+const _hold1=new THREE.Vector3(), _hold2=new THREE.Vector3(), _hold3=new THREE.Vector3();
+// tools are modelled along +z (face normal +y); the device frame has the top along +y and the screen normal +z: rotate -90 deg about x
+const TOOL_FIX=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),-Math.PI/2), TOOL_FIX_INV=TOOL_FIX.clone().invert();
 const SKINS=[0xf6cfae,0xe9b88c,0xc68a5a,0x8d5a3c,0xffd9b8], HAIRS=[0x3a2417,0xf5d36b,0xd9662a,0x111111,0x8c5a2b,0xdddddd];
 const FACES={happy:[0,0],surprised:[1,0],determined:[2,0],cheer:[0,1],sad:[1,1],wink:[2,1]};
 function makeMii(color,name,opts={}){
@@ -61,9 +64,23 @@ function makeMii(color,name,opts={}){
   if(ART.faces){ faceTex=tex('faces',1/3,1/2); const cap=new THREE.SphereGeometry(.338,24,16,Math.PI/2-.62,1.24,Math.PI/2-.5,1.0); const fm=new THREE.Mesh(cap,new THREE.MeshBasicMaterial({map:faceTex,transparent:true,depthWrite:false})); fm.position.y=-.02; headG.add(fm); }
   else { for(const sx of[-1,1]){ const e=sph(.045,0x1c2430,{cast:false},8); e.position.set(sx*.12,.03,.29); headG.add(e); } const mouth=box(.12,.03,.02,0xa04040,{cast:false}); mouth.position.set(0,-.13,.31); headG.add(mouth); }
   const arms={}; for(const side of['L','R']){ const sx=side==='L'?-1:1; const a=new THREE.Group(); a.position.set(sx*.34,1.27,0); body.add(a); a.rotation.order='YXZ'; const up=cyl(.075,.07,.62,c.getHex()); up.position.y=-.31; a.add(up); const hand=sph(.09,skin); hand.position.y=-.66; a.add(hand); const tool=new THREE.Group(); tool.position.y=-.68; a.add(tool); a.rotation.z=sx*-.18; arms[side]={g:a,tool,hand,sx}; }
+  const toolG=new THREE.Group(); body.add(toolG); toolG.visible=false;
   const tag=textSprite(name||'',color); tag.position.y=2.25; g.add(tag);
-  const mii={g,body,headG,arms,tag,legs,anim:null,t:rnd(0,9),tool:null,color,name,faceT:0,baseExpr:'happy',
+  const mii={toolG,tracked:false,g,body,headG,arms,tag,legs,anim:null,t:rnd(0,9),tool:null,color,name,faceT:0,baseExpr:'happy',
     face(expr,hold){ if(!faceTex)return; const f=FACES[expr]||FACES.happy; faceTex.offset.set(f[0]/3,f[1]===0?.5:0); this.faceT=hold||0; this.expr=expr; },
+    // tracked tools live in toolG (positioned at the hand each frame by hold()), built along +z (tool direction) with the face normal +y
+    setTrackedTool(kind){ toolG.clear(); this.tracked=!!kind; toolG.visible=!!kind; for(const s of['L','R'])arms[s].tool.clear(); this.tool=kind; if(!kind)return; const add=m=>toolG.add(m); const rx=m=>{ m.rotation.x=Math.PI/2; return m; };
+      if(kind==='racket'){ const h=rx(cyl(.02,.02,.32,0x222222)); h.position.z=.16; add(h); const hd=mesh(new THREE.TorusGeometry(.17,.02,8,24),0xdddddd); hd.rotation.x=Math.PI/2; hd.position.z=.5; add(hd); const st=mesh(new THREE.CircleGeometry(.16,24),0xffffff,{m:{transparent:true,opacity:.35,side:THREE.DoubleSide},cast:false}); st.rotation.x=-Math.PI/2; st.position.z=.5; add(st); }
+      if(kind==='bat'){ const b=rx(cyl(.02,.038,.86,0xc98d55)); b.position.z=.43; add(b); }
+      if(kind==='club'){ const sh=rx(cyl(.013,.013,.95,0xbbbbbb)); sh.position.z=.47; add(sh); const hd=box(.09,.05,.06,0x444444); hd.position.set(.03,-.03,.95); add(hd); }
+      if(kind==='ball'){ const b=sph(.108,0x1b1f3b,{phong:true}); b.position.z=.12; add(b); this.ballMesh=b; }
+      if(kind==='basketball'){ const b=sph(.12,0xe8772e,{phong:true}); b.position.z=.14; add(b); this.ballMesh=b; }
+      if(kind==='glove'){ const gl=sph(.15,0xd63a48,{phong:true}); add(gl); }
+      if(kind==='phone'){ const ph=box(.075,.009,.155,0x1c2430); ph.position.z=.078; add(ph); const sc=box(.064,.002,.135,0x2f80ff,{m:{emissive:0x1a4fa0}}); sc.position.set(0,.0045,.078); add(sc); const tip=mesh(new THREE.ConeGeometry(.02,.05,8),0xffc233); tip.rotation.x=Math.PI/2; tip.position.z=.18; add(tip); }
+      if(kind==='sword'){ const bl=box(.05,.008,.9,0xdde3ea,{phong:true}); bl.position.z=.5; add(bl); const gd=box(.16,.02,.03,0xffc233); gd.position.z=.05; add(gd); }
+    },
+    // place the tracked hand: handLocal = shoulder-relative offset (mii-local), qLocal = tool orientation (mii-local)
+    hold(handLocal,qLocal,side='R',maxLen){ const a=arms[side].g; const sh=a.position; const d=_hold1.copy(handLocal); const len=Math.min(d.length(),maxLen||.7); d.normalize(); const hand=_hold2.copy(sh).addScaledVector(d,len); a.quaternion.setFromUnitVectors(_hold3.set(0,-1,0),d); toolG.position.copy(hand); toolG.quaternion.copy(qLocal).multiply(TOOL_FIX); return hand; },
     setTool(kind){ for(const s of['L','R'])arms[s].tool.clear(); this.tool=kind; if(!kind)return; const add=(m,side)=>arms[side||'R'].tool.add(m);
       if(kind==='racket'){ const h=cyl(.02,.02,.32,0x222222); h.position.y=-.16; add(h); const hd=mesh(new THREE.TorusGeometry(.17,.02,8,24),0xdddddd); hd.position.y=-.5; add(hd); const st=mesh(new THREE.CircleGeometry(.16,24),0xffffff,{m:{transparent:true,opacity:.35,side:THREE.DoubleSide},cast:false}); st.position.y=-.5; add(st); }
       if(kind==='bat'){ const b=cyl(.038,.02,.86,0xc98d55); b.position.y=-.43; add(b); const k=cyl(.03,.03,.04,0x333333); k.position.y=-.02; add(k); }

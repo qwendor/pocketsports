@@ -1,7 +1,8 @@
 /* ============================== BOXING ============================== */
+const BOX_CFG={rest:[.28,-.05,.4],posGain:1.4,punchSpeed:2.6,reach:.8,armLen:1.05,hookRatio:.75,upperRatio:.6,powerDiv:4.5,guardY:1.72,guardR:.55,guardSpeed:1.0};
 SPORTS.boxing={
   name:'Boxing',icon:'🥊',players:'1-4 players',ROUNDS:3,ROUND_T:60,
-  how:['Hold your phone in your fist. <b>Punch forward</b> to jab, swing sideways for a hook, punch upward for an uppercut.','Hold the <b>BLOCK</b> button on your phone to guard. Blocking stops most of the damage.','Harder punches hurt more. Knock your opponent\'s health to zero for a K.O.','3 rounds of 60 seconds. With 3 or 4 players, the winner stays in the ring.'],
+  how:['Your glove follows the phone: hold it in your fist. Punch straight for a jab, swing sideways for a hook, punch upward for an uppercut. A punch lands when your glove actually reaches the other boxer.','Raise the glove in front of your face (or hold BLOCK) to guard. Blocking stops most of the damage.','Harder punches hurt more. Knock your opponent\'s health to zero for a K.O.','3 rounds of 60 seconds. With 3 or 4 players, the winner stays in the ring.'],
   who:n=>n<=1?'You vs the computer':n===2?'Player 1 vs Player 2':'Winner stays on: P1 vs P2, then the winner takes on the next player',
   build(players){
     const s=newScene({sky:0x1b2233,fog:false,shadow:10,sunX:4,sunY:12,sunZ:6,hemi:.35,sun:.7,hemiSky:0x9fb3d8,hemiGround:0x1a2030});
@@ -16,27 +17,40 @@ SPORTS.boxing={
     this.startBout();
   },
   startBout(){ this.queue=this.queue||[]; const A=this.champ||this.queue.shift(); const B=this.queue.shift()||cpuPlayer('CPU','#8899aa'); this.boxers=[this.mkBoxer(A,-1),this.mkBoxer(B,1)]; this.round=0; this.state='intro'; this.stateT=0; this.hudHP(); banner('ROUND 1','get ready',1.8); this.phones(); AUD.fanfare(); },
-  mkBoxer(p,side){ if(this.boxers)this.boxers.forEach(b=>{ if(b.p===p){ R.scene.remove(b.mii.g); } }); const mii=makeMii(p.color,p.name); mii.setTool('gloves'); mii.baseExpr='determined'; mii.face('determined'); mii.g.position.set(side*1.05,.62,0); mii.g.rotation.y=side>0?-Math.PI/2:Math.PI/2; R.scene.add(mii.g); const b={p,cpu:!!p.cpu,mii,side,hp:100,punch:null,block:false,stun:0,cd:0,ko:false,cpuAt:0,blockT:0,lean:0,hitT:0,side}; mii.rest=m=>{ this.guardPose(b,m); }; return b; },
-  guardPose(b,m){ const bl=b.block?1:0; m.arm('R',lerp(-1.6,-2.3,bl),lerp(-.3,-.1,bl),.5-.3*bl); m.arm('L',lerp(-1.6,-2.3,bl),lerp(.3,.1,bl),-.5+.3*bl); m.body.rotation.x=lerp(m.body.rotation.x,.1+.15*bl,.2); m.body.position.z=lerp(m.body.position.z,0,.2); },
-  phones(){ this.players.forEach(p=>{ const b=this.boxers.find(x=>x.p===p); if(b)phoneUI(p,{mode:'box',icon:'🥊',title:'FIGHT!',sub:'Punch forward, hook sideways, or uppercut. Hold BLOCK to guard.',btns:[{id:'block',label:'HOLD TO BLOCK',hold:1}],rate:3}); else phoneUI(p,{mode:'wait',icon:'🥊',title:'Next up',sub:this.boxers[0].p.name+' vs '+this.boxers[1].p.name,btns:[],rate:3}); }); },
+  mkBoxer(p,side){ if(this.boxers)this.boxers.forEach(b=>{ if(b.p===p){ R.scene.remove(b.mii.g); } }); const mii=makeMii(p.color,p.name); mii.baseExpr='determined'; mii.face('determined'); mii.g.position.set(side*.75,.62,0); mii.g.rotation.y=side>0?-Math.PI/2:Math.PI/2; R.scene.add(mii.g);
+    if(!p.cpu){ mii.setTrackedTool('glove'); const gl=sph(.15,0xd63a48,{phong:true}); gl.position.y=-.05; mii.arms.L.tool.add(gl); } else mii.setTool('gloves');
+    const b={p,cpu:!!p.cpu,mii,side,hp:100,punch:null,block:false,stun:0,cd:0,ko:false,cpuAt:0,blockT:0,lean:0,hitT:0,tr:new PointTracker(),rest:new THREE.Vector3(...BOX_CFG.rest),guardAuto:false}; mii.rest=m=>{ this.guardPose(b,m); }; return b; },
+  guardPose(b,m){ const bl=b.block?1:0; if(!m.tracked)m.arm('R',lerp(-1.6,-2.3,bl),lerp(-.3,-.1,bl),.5-.3*bl); m.arm('L',lerp(-1.6,-2.3,bl),lerp(.3,.1,bl),-.5+.3*bl); m.body.rotation.x=lerp(m.body.rotation.x,.1+.15*bl,.2); m.body.position.z=lerp(m.body.position.z,0,.2); },
+  phones(){ this.players.forEach(p=>{ const b=this.boxers.find(x=>x.p===p); if(b)phoneUI(p,{mode:'box',icon:'🥊',title:'FIGHT!',sub:'Your glove follows the phone. Punch forward, hook sideways, or uppercut. Raise it to your face or hold BLOCK to guard.',btns:[{id:'block',label:'HOLD TO BLOCK',hold:1},{id:'recenter',label:'RECENTER',sec:1}],rate:3}); else phoneUI(p,{mode:'wait',icon:'🥊',title:'Next up',sub:this.boxers[0].p.name+' vs '+this.boxers[1].p.name,btns:[],rate:3}); }); },
   hudHP(){ const [A,B]=this.boxers; const bar=b=>`<div class="hp" style="--c:${b.p.color}"><div class="nm"><span>${esc(b.p.name)}</span><span>${Math.max(0,Math.ceil(b.hp))}</span></div><div class="bar"><i style="width:${clamp(b.hp,0,100)}%"></i></div></div>`; hud('TL',bar(A)); hud('TR',bar(B)); },
   hudTime(){ hud('TC',`<b>ROUND ${this.round+1}</b> &nbsp; ${Math.ceil(this.timer)}s`); },
   onBtn(p,id,down){ const b=this.boxers.find(x=>x.p===p); if(!b||id!=='block')return; b.block=down&&!b.ko; if(down&&b.punch)b.punch=null; },
-  onSwingStart(p){ const b=this.boxers.find(x=>x.p===p); if(b)this.punch(b,'jab',.9,true); },
-  onSwing(p,sw){ const b=this.boxers.find(x=>x.p===p); if(!b)return; const ax=Math.abs(sw.dx),ay=Math.abs(sw.dy),az=Math.abs(sw.dz); let type='jab'; if(sw.touch){ type=ay>ax?(sw.dy>0?'upper':'jab'):'hook'; } else { if(Math.abs(sw.rg)>260||(ax>ay&&ax>az))type='hook'; else if(az>ay&&sw.dz>0)type='upper'; }
+  // legacy gesture path for phones without tracking
+  onSwingStart(p){ const b=this.boxers.find(x=>x.p===p); if(b&&!tracked(p))this.punch(b,'jab',.9,true); },
+  onSwing(p,sw){ const b=this.boxers.find(x=>x.p===p); if(!b||tracked(p))return; const ax=Math.abs(sw.dx),ay=Math.abs(sw.dy),az=Math.abs(sw.dz); let type='jab'; if(sw.touch){ type=ay>ax?(sw.dy>0?'upper':'jab'):'hook'; } else { if(Math.abs(sw.rg)>260||(ax>ay&&ax>az))type='hook'; else if(az>ay&&sw.dz>0)type='upper'; }
     if(b.punch&&b.punch.early&&b.punch.t<.13){ b.punch.pw=clamp(sw.pw,.4,1.6); b.punch.type=type; b.punch.early=false; return; } this.punch(b,type,sw.pw); },
   punch(b,type,pw,early){ if(this.state!=='fight'||b.ko||b.punch||b.stun>0||b.cd>0)return; b.block=false; b.punch={type,t:0,dur:b.cpu?.5:.34,hitAt:b.cpu?.28:.16,pw:clamp(pw,.4,1.6),done:false,early:!!early,arm:b.nextArm=(b.nextArm==='L'?'R':'L')}; AUD.swish(); const m=b.mii, arm=b.punch.arm, self=this;
+    if(m.tracked)return;
     m.play('punch',.34,(mii,k)=>{ self.guardPose(b,mii); const e=k<.45?easeOut(k/.45):1-easeIn((k-.45)/.55); if(type==='jab'){ mii.arm(arm,-1.55-e*.05,arm==='L'?.3*(1-e):-.3*(1-e),(arm==='L'?-1:1)*(.5-e*.45)); mii.body.position.z=-e*.25; }
       else if(type==='hook'){ mii.arm(arm,-1.5,(arm==='L'?1:-1)*(1.4-e*2.6),(arm==='L'?-1:1)*.4); mii.body.rotation.y=(arm==='L'?1:-1)*(.5-e*1.0); }
       else { mii.arm(arm,-.6-e*1.9,0,(arm==='L'?-1:1)*.3); mii.body.rotation.x=.3-e*.4; mii.body.position.z=-e*.15; } }); },
+  // ---- tracked glove: real punch = the glove moving fast toward the opponent and reaching them ----
+  trackGlove(b,o,dt){ const c=b.p.ctrl, K=BOX_CFG, m=b.mii; rigHand(m,c,b.rest,K.posGain,1,K.armLen); b.tr.update(m.toolG,_bx1.set(0,0,0),dt); m.arm('L',-1.6,.3,-.5);
+    const hv=ctrlVelWorld(m,c,_bx2).add(b.tr.vel); const sp=hv.length(); const g=b.tr.pos; const head=m.g.position;
+    // guard: glove held up in front of the face, or the block button
+    const guarding=b.p.btn.block||(g.y>K.guardY&&Math.hypot(g.x-head.x,g.z-head.z)<K.guardR&&sp<K.guardSpeed); if(!b.ko)b.block=guarding;
+    if(this.state!=='fight'||b.ko)return;
+    const fwd=_bx3.set(o.mii.g.position.x-head.x,0,o.mii.g.position.z-head.z).normalize(); const vf=hv.dot(fwd);
+    if(!b.punch&&b.stun<=0&&b.cd<=0&&sp>K.punchSpeed&&vf>sp*.35&&!guarding){ const lat=Math.hypot(hv.x-fwd.x*vf,hv.z-fwd.z*vf); let type='jab'; if(hv.y>K.upperRatio*sp)type='upper'; else if(lat>K.hookRatio*Math.max(vf,.01))type='hook'; b.punch={type,t:0,dur:.45,hitAt:99,pw:clamp(sp/K.powerDiv,.5,1.6),done:false,tracked:true,arm:'R'}; AUD.swish(); }
+    if(b.punch&&b.punch.tracked&&!b.punch.done){ const chest=_bx4.copy(o.mii.g.position).add(_bx1.set(0,1.45,0)); const d=g.distanceTo(chest); const vf2=hv.dot(fwd); if(d<K.reach&&vf2>0.4){ b.punch.done=true; b.punch.pw=clamp(Math.max(b.punch.pw,sp/K.powerDiv),.5,1.6); this.resolve(b); } else if(b.punch.t>=b.punch.dur){ b.punch=null; b.cd=.12; } } },
   resolve(b){ const o=this.boxers.find(x=>x!==b); const pn=b.punch; const dmg={jab:5+5*pn.pw,hook:8+7*pn.pw,upper:10+9*pn.pw}[pn.type]; b.cd=.35;
     if(o.dodge>0){ banner('DODGE','',.6); return; }
-    if(o.block){ o.hp-=dmg*.2; AUD.thud(); o.mii.play('blockhit',.25,(m,k)=>{ this.guardPose(o,m); m.body.position.z=Math.sin(k*Math.PI)*.12; }); this.spark(o,0x9fb3c8); if(!o.cpu)buzz(o.p,40); }
-    else { o.hp-=dmg; o.stun=.4; AUD.punch(); this.shake=.25; this.spark(o,0xffc233); if(!o.cpu)buzz(o.p,150); o.mii.face('surprised',.5); const up=pn.type==='upper'; o.punch=null; o.mii.play('hit',.45,(m,k)=>{ this.guardPose(o,m); const e=Math.sin(k*Math.PI); m.headG.rotation.x=(up?-.7:-.45)*e; m.headG.rotation.y=(pn.type==='hook'?.6:0)*e; m.body.position.z=e*.3; m.body.rotation.x=-.25*e; });
+    if(o.block){ o.hp-=dmg*.2; AUD.thud(); if(!o.mii.tracked)o.mii.play('blockhit',.25,(m,k)=>{ this.guardPose(o,m); m.body.position.z=Math.sin(k*Math.PI)*.12; }); this.spark(o,0x9fb3c8); if(!o.cpu)buzz(o.p,40); }
+    else { o.hp-=dmg; o.stun=.4; AUD.punch(); this.shake=.25; this.spark(o,0xffc233); if(!o.cpu)buzz(o.p,150); o.mii.face('surprised',.5); const up=pn.type==='upper'; o.punch=null; o.mii.play('hit',.45,(m,k)=>{ if(!m.tracked)this.guardPose(o,m); const e=Math.sin(k*Math.PI); m.headG.rotation.x=(up?-.7:-.45)*e; m.headG.rotation.y=(pn.type==='hook'?.6:0)*e; m.body.position.z=e*.3; m.body.rotation.x=-.25*e; });
       if(o.hp<=0){ this.knockout(o,b); } }
-    this.hudHP(); },
+    banner(pn.type==='jab'?'JAB':pn.type==='hook'?'HOOK':'UPPERCUT',o.block?'blocked':'',.5); this.hudHP(); },
   spark(o,color){ for(let i=0;i<8;i++){ const m=sph(.05,color,{cast:false,recv:false},6); m.position.set(o.mii.g.position.x-o.side*.3,1.9+rnd(-.2,.2),rnd(-.2,.2)); m.userData.v=V3(rnd(-2,2),rnd(1,4),rnd(-2,2)); m.userData.t=0; R.scene.add(m); this.fx.push(m); } },
-  knockout(o,b){ o.ko=true; o.block=false; this.state='ko'; this.stateT=0; o.mii.face('sad',9); b.mii.face('cheer',9); banner('K.O.!',b.p.name+' wins by knockout',3,'gold'); AUD.cheer(); AUD.crash(); if(!b.cpu)buzz(b.p,500); o.mii.play('ko',.9,(m,k)=>{ const e=easeIn(k); m.g.rotation.x=0; m.body.rotation.x=-e*1.5; m.body.position.z=e*.9; m.body.position.y=-e*.35; m.arm('L',-2.5*e,0,-.5); m.arm('R',-2.5*e,0,.5); }); o.mii.rest=null; this.endBout(b,o); },
+  knockout(o,b){ o.ko=true; o.block=false; this.state='ko'; this.stateT=0; o.mii.face('sad',9); b.mii.face('cheer',9); banner('K.O.!',b.p.name+' wins by knockout',3,'gold'); AUD.cheer(); AUD.crash(); if(!b.cpu)buzz(b.p,500); o.mii.play('ko',.9,(m,k)=>{ const e=easeIn(k); m.g.rotation.x=0; m.body.rotation.x=-e*1.5; m.body.position.z=e*.9; m.body.position.y=-e*.35; m.arm('L',-2.5*e,0,-.5); if(!m.tracked)m.arm('R',-2.5*e,0,.5); }); o.mii.rest=null; this.endBout(b,o); },
   endBout(w,l){ this.pendingEnd=true; const wi=this.players.indexOf(w.p); if(wi>=0)this.wins[wi]++; this.champ=w.p; this.loser=l.p; },
   update(dt){
     this.t+=dt; this.stateT+=dt; const [A,B]=this.boxers;
@@ -44,11 +58,13 @@ SPORTS.boxing={
     if(this.state==='fight'){ this.timer-=dt; if(this.timer<=0){ this.round++; if(this.round>=this.ROUNDS){ const w=A.hp>=B.hp?A:B, l=w===A?B:A; this.state='ko'; this.stateT=0; banner('DECISION',w.p.name+' wins on points',3,'gold'); AUD.cheer(); this.endBout(w,l); } else { this.state='rest'; this.stateT=0; banner('ROUND '+(this.round+1),'',1.8); this.boxers.forEach(b=>{ b.hp=Math.min(100,b.hp+15); b.punch=null; b.block=false; }); this.hudHP(); } }
       this.hudTime();
       this.boxers.forEach(b=>{ const o=b===A?B:A; b.stun=Math.max(0,b.stun-dt); b.cd=Math.max(0,b.cd-dt); b.dodge=Math.max(0,(b.dodge||0)-dt);
-        if(b.punch){ b.punch.t+=dt; if(!b.punch.done&&b.punch.t>=b.punch.hitAt){ b.punch.done=true; this.resolve(b); } if(b.punch.t>=b.punch.dur)b.punch=null; }
+        if(b.punch&&!b.punch.tracked){ b.punch.t+=dt; if(!b.punch.done&&b.punch.t>=b.punch.hitAt){ b.punch.done=true; this.resolve(b); } if(b.punch.t>=b.punch.dur)b.punch=null; }
+        else if(b.punch&&b.punch.tracked){ b.punch.t+=dt; }
         if(b.cpu){ if(o.punch&&!o.punch.done&&!b.block&&b.blockT<=0&&Math.random()<.02*60*dt*.6){ b.block=true; b.blockT=.5; } if(b.blockT>0){ b.blockT-=dt; if(b.blockT<=0)b.block=false; }
-          if(this.t>b.cpuAt&&!b.block&&!b.punch&&b.stun<=0){ b.cpuAt=this.t+rnd(1.1,2.3); this.punch(b,['jab','jab','hook','upper'][Math.floor(Math.random()*4)],clamp(.85+gauss()*.2,.5,1.3)); } }
+          if(this.t>b.cpuAt&&!b.block&&!b.punch&&b.stun<=0){ b.cpuAt=this.t+rnd(1.4,2.7); this.punch(b,['jab','jab','hook','upper'][Math.floor(Math.random()*4)],clamp(.7+gauss()*.2,.45,1.1)); } }
       });
     }
+    this.boxers.forEach(b=>{ const o=b===A?B:A; if(!b.cpu&&tracked(b.p)&&!b.ko){ if(!b.mii.tracked)b.mii.setTrackedTool('glove'); this.trackGlove(b,o,dt); } });
     if(this.state==='rest'&&this.stateT>2.2){ this.state='fight'; this.stateT=0; this.timer=this.ROUND_T; banner('FIGHT!','',.9,'red'); }
     if(this.state==='ko'&&this.stateT>3.4&&this.pendingEnd){ this.pendingEnd=false; this.nextBout(); return; }
     this.boxers.forEach(b=>{ b.mii.update(dt); if(!b.ko&&!b.mii.anim){ b.mii.headG.rotation.x*=.9; b.mii.headG.rotation.y*=.9; b.mii.body.rotation.y*=.85; } });
@@ -60,3 +76,4 @@ SPORTS.boxing={
   onKey(k){ if(TEST){ const b=this.boxers[0]; if(k==='j')this.punch(b,'jab',1); if(k==='h')this.punch(b,'hook',1); if(k==='u')this.punch(b,'upper',1); if(k==='b')b.block=!b.block; } },
   dispose(){}
 };
+const _bx1=new THREE.Vector3(), _bx2=new THREE.Vector3(), _bx3=new THREE.Vector3(), _bx4=new THREE.Vector3();
