@@ -1,6 +1,6 @@
 /* ============================== BOWLING ============================== */
 const PINSPOTS=[[0,0],[-.1524,-.264],[.1524,-.264],[-.3048,-.528],[0,-.528],[.3048,-.528],[-.4572,-.792],[-.1524,-.792],[.1524,-.792],[.4572,-.792]];
-const BOWL_CFG={rest:[.3,-.35,.25],speedGain:1.25,minSpeed:4,maxSpeed:11.5,aimMaxDeg:10,autoReleaseSpeed:2.6,autoReleaseY:1.25,spinGain:1/6,aimBlend:.5};
+const BOWL_CFG={rest:[.3,-.35,.25],speedGain:1.25,minSpeed:4,maxSpeed:11.5,aimMaxDeg:10,autoReleaseSpeed:2.6,autoReleaseY:1.25,spinGain:1/12,aimBlend:.5};
 function bowlScore(fr){ // fr = array of frames, each an array of rolls; returns {cum:[...], total}
   const rolls=[]; fr.forEach((f,i)=>f.forEach(r=>{rolls.push(r);}));
   const cum=[]; let total=0, k=0;
@@ -14,7 +14,7 @@ function bowlScore(fr){ // fr = array of frames, each an array of rolls; returns
 }
 SPORTS.bowling={
   name:'Bowling',icon:'🎳',players:'1-4 players',FRAMES:10,BR:.108,PR:.058,
-  how:['Your hand and the ball follow the phone. Point the phone down the lane to aim (the dotted line shows it).','Swing your arm back and forward like a real bowl. The ball leaves your hand at the bottom of the forward swing, with your hand speed and direction.','Hold GRIP on the phone if you want to choose the exact release moment yourself; let go to release.','Twist your wrist as you release to hook the ball. 10 frames, highest score wins.'],
+  how:['Point the phone down the lane to aim (the dotted line follows it), then tap LOCK AIM on your phone.','Now swing your arm back and forward like a real bowl. The ball leaves your hand at the bottom of the forward swing; a faster swing throws harder.','Twist your wrist as you release to hook the ball.','10 frames, highest score wins.'],
   who:n=>n<=1?'Solo game, 10 frames':n+' players take turns, 10 frames each',
   build(players){
     const s=newScene({sky:0x2a3550,fog:false,shadow:14,sunX:6,sunY:18,sunZ:-4,hemi:.3,sun:.55,hemiSky:0x8fa3c8,hemiGround:0x222a3a});
@@ -41,19 +41,21 @@ SPORTS.bowling={
   pinMesh(){ const g=new THREE.Group(); const b=cyl(.045,.058,.3,0xffffff,12); b.position.y=.15; g.add(b); const n=cyl(.03,.045,.08,0xffffff,12); n.position.y=.33; g.add(n); const h=sph(.04,0xffffff,{},10); h.position.y=.37; g.add(h); const st=mesh(new THREE.TorusGeometry(.046,.012,6,16),0xe0313f); st.rotation.x=Math.PI/2; st.position.y=.3; g.add(st); return g; },
   setPins(fresh){ if(fresh){ this.pins.forEach(p=>R.scene.remove(p.m)); this.pins=PINSPOTS.map(([x,z],i)=>{ const m=this.pinMesh(); m.position.set(x,0,-18.29+z); R.scene.add(m); return {i,x,z:-18.29+z,ox:x,oz:-18.29+z,vx:0,vz:0,up:true,fallT:0,m,gone:false,rot:0,dir:0,drop:0}; }); }
     else { this.pins=this.pins.filter(p=>{ if(!p.up){ R.scene.remove(p.m); return false; } p.ox=p.x; p.oz=p.z; p.vx=p.vz=0; return true; }); } },
-  beginTurn(){ this.state='aim'; this.stateT=0; const p=this.players[this.pi]; this.ball.active=false; this.ball.gutter=false; this.ballM.visible=false; this.hold=false; this.holdT=0; this.aim=0; this.released=false; this.yaw0=null; this.armed=false; this.peak=0; this.vPeak=new THREE.Vector3(); this.tr=new PointTracker();
+  beginTurn(){ this.state='aim'; this.stateT=0; const p=this.players[this.pi]; this.ball.active=false; this.ball.gutter=false; this.ballM.visible=false; this.hold=false; this.holdT=0; this.aim=0; this.released=false; this.yaw0=null; this.armed=false; this.locked=false; this.peak=0; this.vPeak=new THREE.Vector3(); this.tr=new PointTracker();
     this.miis.forEach((m,i)=>{ m.g.visible=i===this.pi; m.g.position.set(tracked(this.players[i])?.62:0,0,tracked(this.players[i])?1.9:2.6); m.g.rotation.y=Math.PI; m.arm('R',0,0,0); m.arm('L',0,0,0); m.body.rotation.y=0; m.body.rotation.x=0; m.anim=null; m.rest=null; if(m.ballMesh)m.ballMesh.visible=true; });
     if(p.cpu){ this.cpuAt=this.t+1.5; }
     hud('B',turnBox(p,`Frame ${this.fi+1} · ${this.roll===0?'1st':this.roll===1?'2nd':'3rd'} ball`));
     this.phones(); this.card(); },
-  phones(){ this.players.forEach((p,i)=>{ if(p.cpu)return; if(i===this.pi)phoneUI(p,{mode:'bowl',icon:'🎳',title:'Your turn',sub:'Point the phone down the lane to aim. Swing your arm back and forward; the ball leaves at the bottom of the swing (or hold GRIP and let go).',btns:[{id:'hold',label:'HOLD GRIP · RELEASE TO THROW',hold:1},{id:'recenter',label:'RECENTER',sec:1}],rate:15}); else phoneUI(p,{mode:'wait',icon:'🎳',title:'Waiting',sub:this.players[this.pi].name+' is bowling. Frame '+(this.fi+1),btns:[],rate:3}); }); },
+  phones(){ this.players.forEach((p,i)=>{ if(p.cpu)return; if(i===this.pi){ if(!this.locked)phoneUI(p,{mode:'bowl',icon:'🎳',title:'Aim',sub:'Point the phone down the lane to move the aim line, then tap LOCK AIM.',btns:[{id:'lock',label:'LOCK AIM',on:1},{id:'recenter',label:'RECENTER',sec:1}],rate:15}); else phoneUI(p,{mode:'bowl',icon:'🎳',title:'Swing!',sub:'Swing your arm back and forward like a bowl. The ball releases at the bottom of the swing; faster = harder. Twist your wrist to hook it.',btns:[{id:'unlock',label:'RE-AIM',sec:1}],rate:15}); } else phoneUI(p,{mode:'wait',icon:'🎳',title:'Waiting',sub:this.players[this.pi].name+' is bowling. Frame '+(this.fi+1),btns:[],rate:3}); }); },
   card(){ const el=$('#bowlcard'); el.classList.remove('hidden'); let h='<table><tr><th></th>'+Array.from({length:10},(_,i)=>'<th>'+(i+1)+'</th>').join('')+'<th>Total</th></tr>';
     this.players.forEach((p,pi)=>{ const fr=this.frames[pi]; const sc=bowlScore(fr); h+=`<tr class="${pi===this.pi?'cur':''}"><td class="nm" style="--c:${p.color}">${esc(p.name)}</td>`;
       for(let f=0;f<10;f++){ const r=fr[f]||[]; const marks=r.map((v,i)=>{ if(v===10)return 'X'; if(i>0&&r[i-1]!==10&&r[i-1]+v===10)return '/'; if(f===9&&i===2&&r[1]!==10&&r[1]+v===10)return '/'; return v===0?'-':v; }); h+=`<td><div class="r">${marks.map(m=>'<span>'+m+'</span>').join('')||'&nbsp;'}</div><div class="t">${sc.cum[f]!=null?sc.cum[f]:'&nbsp;'}</div></td>`; }
       h+=`<td class="t">${sc.total}</td></tr>`; });
     el.innerHTML=h+'</table>'; },
   onOrient(p){ if(this.players[this.pi]===p&&this.state==='aim'&&!tracked(p)){ this.aim=aimFrom(this,p); } },
-  onBtn(p,id,down,m){ if(this.players[this.pi]!==p||this.state!=='aim')return; if(id==='recenter'&&down){ this.yaw0=null; this.aim=0; return; } if(id!=='hold')return;
+  onBtn(p,id,down,m){ if(this.players[this.pi]!==p||this.state!=='aim')return; if(id==='recenter'&&down){ this.yaw0=null; this.aim=0; return; }
+    if(id==='lock'&&down){ this.locked=true; this.peak=0; this.stateT=0; this.phones(); AUD.tick(); return; } if(id==='unlock'&&down){ this.locked=false; this.phones(); return; }
+    if(id!=='hold')return;
     if(tracked(p)){ if(down){ this.hold=true; } else if(this.hold&&!this.released){ this.throwTracked(p); } return; }
     if(down){ this.startHold(); } else if(this.hold){ this.throwBall(clamp((m.p||12)/20,.3,1.6),(m.rg||0),(m.dx||0)); } },
   onSwingStart(p){ if(this.players[this.pi]===p&&this.state==='aim'&&!this.hold&&!tracked(p))this.startHold(); },
@@ -61,11 +63,11 @@ SPORTS.bowling={
   // ---- tracked hand: the ball rides in the hand; release from the measured hand velocity ----
   trackHand(p,dt){ const m=this.miis[this.pi], c=p.ctrl, K=BOWL_CFG; rigHand(m,c,this.rest,null,.85); this.tr.update(m.toolG,_bw1.set(0,0,.12),dt);
     const hv=ctrlVelWorld(m,c,_bw2).add(this.tr.vel); const sp=hv.length();
-    if(!this.released){ if(sp<1.5){ const ax=c.axis(); const deg=clamp(Math.atan2(ax.x,-ax.z)*180/Math.PI,-K.aimMaxDeg,K.aimMaxDeg); this.aim=lerp(this.aim,deg/4.5,.25); }
+    if(!this.released){ if(!this.locked){ const ax=c.axis(); const deg=clamp(Math.atan2(ax.x,-ax.z)*180/Math.PI,-K.aimMaxDeg,K.aimMaxDeg); this.aim=lerp(this.aim,deg/4.5,.25); return; }
       if(-hv.z>sp*.5&&sp>this.peak){ this.peak=sp; this.vPeak.copy(hv); }
-      if(!this.hold&&!p.btn.hold&&this.stateT>.8&&this.peak>K.autoReleaseSpeed&&sp<this.peak*.92&&this.tr.pos.y<K.autoReleaseY){ this.throwTracked(p,this.vPeak); } } },
+      if(this.stateT>.5&&this.peak>K.autoReleaseSpeed&&sp<this.peak*.92&&this.tr.pos.y<K.autoReleaseY){ this.throwTracked(p,this.vPeak); } } },
   throwTracked(p,vel){ if(this.released)return; const c=p.ctrl, K=BOWL_CFG; const m=this.miis[this.pi]; const hv=vel?_bw2.copy(vel):ctrlVelWorld(m,c,_bw2).add(this.tr.vel); const sp=Math.hypot(hv.x,hv.z);
-    const speed=clamp(sp*K.speedGain,K.minSpeed,K.maxSpeed); const swingAng=sp>.5?clamp(Math.atan2(hv.x,-hv.z)*180/Math.PI,-K.aimMaxDeg,K.aimMaxDeg):this.aim*4.5; const ang=lerp(this.aim*4.5,swingAng,K.aimBlend);
+    const speed=clamp(sp*K.speedGain,K.minSpeed,K.maxSpeed); const swingAng=sp>.5?clamp(Math.atan2(hv.x,-hv.z)*180/Math.PI,-K.aimMaxDeg,K.aimMaxDeg):this.aim*4.5; const ang=lerp(this.aim*4.5,swingAng,K.aimBlend*.4);
     const ax=c.axis(); const spin=clamp(-c.w.dot(ax)*K.spinGain,-1,1); // wrist twist about the pointing axis hooks the ball
     this.released=true; if(m.ballMesh)m.ballMesh.visible=false; this.launch({speed,spin,ang,x:clamp(this.tr.pos.x,-.35,.35)}); },
   // ---- legacy path (CPU, touch mode): canned approach + release ----
@@ -78,7 +80,7 @@ SPORTS.bowling={
   update(dt){
     this.t+=dt; this.stateT+=dt; const p=this.players[this.pi];
     if(this.state==='aim'){ this.guide.visible=!this.released; this.guide.rotation.y=-this.aim*4.5*Math.PI/180; if(p.cpu&&this.t>this.cpuAt&&!this.hold){ this.aim=(Math.random()<.5?1:-1)*.5+gauss()*.15; this.startHold(); setTimeout(()=>{ if(this.state==='aim')this.throwBall(1+gauss()*.15,0,0); },700); }
-      if(!p.cpu&&tracked(p))this.trackHand(p,dt);
+      if(!p.cpu&&tracked(p))this.trackHand(p,dt); if(this.locked&&!this.released)this.guide.visible=true;
       if(this.hold&&!this.released&&!tracked(p)){ this.holdT+=dt; if(this.holdT>6){ this.throwBall(.8,0,0); } }
       camLerp(V3(2.3+this.aim*.3,2.7,6.4),V3(-.3+this.aim*.5,.5,-8),.06); }
     else if(this.state==='roll'){ this.physics(dt); const b=this.ball; if(!p.cpu&&tracked(p))rigHand(this.miis[this.pi],p.ctrl,this.rest,null,.85); camLerp(V3(b.x*.4,1.5,b.z+4.2),V3(b.x*.2,.25,b.z-7),.08); if(!b.active){ this.state='settle'; this.stateT=0; } }
@@ -91,7 +93,7 @@ SPORTS.bowling={
   physics(dt){ const STEP=1/240; let n=Math.min(60,Math.ceil(dt/STEP)); const h=dt/n; for(let i=0;i<n;i++)this.step(h); },
   step(h){
     const b=this.ball, BR=this.BR, PR=this.PR;
-    if(b.active){ if(!b.gutter){ if(b.z<-7)b.vx+=b.spin*.55*h; b.vx*=(1-.02*h); b.vz*=(1-.015*h); }
+    if(b.active){ if(!b.gutter){ if(b.z<-7)b.vx+=b.spin*.42*h; b.vx*=(1-.02*h); b.vz*=(1-.015*h); }
       b.x+=b.vx*h; b.z+=b.vz*h;
       if(!b.gutter&&Math.abs(b.x)>.525+BR*.35){ b.gutter=true; b.x=Math.sign(b.x)*.66; b.vx=0; b.y=-.06; b.spin=0; AUD.thud(); }
       if(b.z<-19.9||Math.hypot(b.vx,b.vz)<.15){ b.active=false; this.ballM.visible=false; }

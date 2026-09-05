@@ -15,7 +15,9 @@ function newScene(o={}){
   const sun=new THREE.DirectionalLight(0xffffff,o.sun!=null?o.sun:.95); sun.position.set(o.sunX||20,o.sunY||40,o.sunZ||15); sun.castShadow=true; const sz=o.shadow||30; sun.shadow.camera.left=-sz; sun.shadow.camera.right=sz; sun.shadow.camera.top=sz; sun.shadow.camera.bottom=-sz; sun.shadow.camera.near=1; sun.shadow.camera.far=200; sun.shadow.mapSize.set(2048,2048); sun.shadow.bias=-.0008; s.add(sun); s.add(sun.target); R.sun=sun;
   R.scene=s; return s;
 }
-function render(){ if(!R.scene||!R.renderer)return; R.renderer.render(R.scene,R.cam); }
+function render(){ if(!R.scene||!R.renderer)return; const r=R.renderer;
+  if(R.views&&R.views.length>1){ const W=innerWidth,H=innerHeight,n=R.views.length; r.setScissorTest(true); R.views.forEach((v,i)=>{ const w=W/n; r.setViewport(i*w,0,w,H); r.setScissor(i*w,0,w,H); v.cam.aspect=w/H; v.cam.updateProjectionMatrix(); r.render(R.scene,v.cam); }); r.setScissorTest(false); r.setViewport(0,0,W,H); return; }
+  r.render(R.scene,R.cam); }
 function camLerp(pos,look,k=.1){ R.camPos.lerp(pos,k); R.camLook.lerp(look,k); R.cam.position.copy(R.camPos); R.cam.lookAt(R.camLook); }
 function camSet(pos,look){ R.camPos.copy(pos); R.camLook.copy(look); R.cam.position.copy(pos); R.cam.lookAt(look); }
 const V3=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
@@ -71,13 +73,13 @@ function makeMii(color,name,opts={}){
     // tracked tools live in toolG (positioned at the hand each frame by hold()), built along +z (tool direction) with the face normal +y
     setTrackedTool(kind){ toolG.clear(); this.tracked=!!kind; toolG.visible=!!kind; for(const s of['L','R'])arms[s].tool.clear(); this.tool=kind; if(!kind)return; const add=m=>toolG.add(m); const rx=m=>{ m.rotation.x=Math.PI/2; return m; };
       if(kind==='racket'){ const h=rx(cyl(.02,.02,.32,0x222222)); h.position.z=.16; add(h); const hd=mesh(new THREE.TorusGeometry(.17,.02,8,24),0xdddddd); hd.rotation.x=Math.PI/2; hd.position.z=.5; add(hd); const st=mesh(new THREE.CircleGeometry(.16,24),0xffffff,{m:{transparent:true,opacity:.35,side:THREE.DoubleSide},cast:false}); st.rotation.x=-Math.PI/2; st.position.z=.5; add(st); }
-      if(kind==='bat'){ const b=rx(cyl(.02,.038,.86,0xc98d55)); b.position.z=.43; add(b); }
+      if(kind==='bat'){ const b=rx(cyl(.028,.052,1.12,0xc98d55,14)); b.position.z=.56; add(b); const k=rx(cyl(.045,.045,.05,0x333333)); k.position.z=.02; add(k); const tape=rx(cyl(.03,.03,.22,0x222222)); tape.position.z=.15; add(tape); }
       if(kind==='club'){ const sh=rx(cyl(.013,.013,.95,0xbbbbbb)); sh.position.z=.47; add(sh); const hd=box(.09,.05,.06,0x444444); hd.position.set(.03,-.03,.95); add(hd); }
       if(kind==='ball'){ const b=sph(.108,0x1b1f3b,{phong:true}); b.position.z=.12; add(b); this.ballMesh=b; }
       if(kind==='basketball'){ const b=sph(.12,0xe8772e,{phong:true}); b.position.z=.14; add(b); this.ballMesh=b; }
       if(kind==='glove'){ const gl=sph(.15,0xd63a48,{phong:true}); add(gl); }
       if(kind==='phone'){ const ph=box(.075,.009,.155,0x1c2430); ph.position.z=.078; add(ph); const sc=box(.064,.002,.135,0x2f80ff,{m:{emissive:0x1a4fa0}}); sc.position.set(0,.0045,.078); add(sc); const tip=mesh(new THREE.ConeGeometry(.02,.05,8),0xffc233); tip.rotation.x=Math.PI/2; tip.position.z=.18; add(tip); }
-      if(kind==='sword'){ const bl=box(.05,.008,.9,0xdde3ea,{phong:true}); bl.position.z=.5; add(bl); const gd=box(.16,.02,.03,0xffc233); gd.position.z=.05; add(gd); }
+      if(kind==='sword'){ const bl=box(.06,.012,1.0,0xdde3ea,{phong:true}); bl.position.z=.56; add(bl); const edge=box(.02,.016,1.0,0xffffff,{phong:true}); edge.position.z=.56; add(edge); const gd=box(.2,.03,.04,0xffc233); gd.position.z=.06; add(gd); const grip=rx(cyl(.025,.025,.14,0x5a3a1a)); grip.position.z=-.02; add(grip); }
     },
     // place the tracked hand: handLocal = shoulder-relative offset (mii-local), qLocal = tool orientation (mii-local)
     hold(handLocal,qLocal,side='R',maxLen){ const a=arms[side].g; const sh=a.position; const d=_hold1.copy(handLocal); const len=Math.min(d.length(),maxLen||.7); d.normalize(); const hand=_hold2.copy(sh).addScaledVector(d,len); a.quaternion.setFromUnitVectors(_hold3.set(0,-1,0),d); toolG.position.copy(hand); toolG.quaternion.copy(qLocal).multiply(TOOL_FIX); return hand; },
@@ -87,6 +89,7 @@ function makeMii(color,name,opts={}){
       if(kind==='club'){ const sh=cyl(.013,.013,.95,0xbbbbbb); sh.position.y=-.47; add(sh); const hd=box(.09,.06,.05,0x444444); hd.position.set(.03,-.95,.02); add(hd); }
       if(kind==='ball'){ const b=sph(.108,0x1b1f3b,{phong:true}); b.position.y=-.12; add(b); this.ballMesh=b; }
       if(kind==='gloves'){ for(const s of['L','R']){ const gl=sph(.15,0xd63a48,{phong:true}); gl.position.y=-.05; arms[s].tool.add(gl); } }
+      if(kind==='sword'){ const bl=box(.06,.012,1.0,0xdde3ea,{phong:true}); bl.position.y=-.56; add(bl); const gd=box(.2,.03,.04,0xffc233); gd.position.y=-.06; add(gd); }
     },
     arm(side,x,y,z){ const a=arms[side].g; a.rotation.set(x,y,z+(arms[side].sx*-.18)); },
     lookAt(x,z){ this.g.rotation.y=Math.atan2(x-this.g.position.x,z-this.g.position.z); },

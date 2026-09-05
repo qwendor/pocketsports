@@ -76,6 +76,7 @@ function flash(){ const f=$('#cFlash'); f.style.opacity=.6; setTimeout(()=>f.sty
 function pop(txt){ const p=$('#cPop'); if(txt)p.textContent=txt; p.classList.add('on'); clearTimeout(p._t); p._t=setTimeout(()=>{ p.classList.remove('on'); p.textContent='SWING!'; },260); }
 function applyUI(cfg){
   C.ui=cfg; C.mode=cfg.mode||''; C.rate=cfg.rate||5; const A=window.PS_ART||{}; if(cfg.art&&A[cfg.art])$('#cIcon').innerHTML='<img src="'+A[cfg.art]+'" alt="">'; else $('#cIcon').textContent=cfg.icon||'🎮'; $('#cTitle').textContent=cfg.title||''; $('#cSub').innerHTML=cfg.sub||'';
+  $('#cMain').classList.toggle('joy',!!cfg.joy); $('#cJoy').classList.toggle('on',!!cfg.joy);
   const b=$('#cBtns'); b.innerHTML=''; (cfg.btns||[]).forEach(bt=>{ const d=document.createElement('div'); d.className='cbtn'+(bt.hold?' hold':'')+(bt.sec?' sec':'')+(bt.on?' on':''); d.textContent=bt.label; d.style.zIndex=2; d.style.position='relative';
     const down=e=>{ e.preventDefault(); if(d.classList.contains('down'))return; d.classList.add('down'); try{d.setPointerCapture(e.pointerId);}catch(x){} if(bt.id==='calib'||bt.id==='recenter'){ miCalibrate(); } if(bt.id==='resetpos')miResetPos(); csend({t:'b',id:bt.id,d:1}); try{navigator.vibrate&&navigator.vibrate(15);}catch(x){} };
     const up=e=>{ if(!d.classList.contains('down'))return; d.classList.remove('down'); const st=recentStats(); csend(Object.assign({t:'b',id:bt.id,d:0},st)); };
@@ -164,5 +165,14 @@ function miSend(){
     csend({t:'s0',ts:ts0,p:Math.round(p*10)/10,dx:dx/n,dy:dy/n,dz:0,rg:Math.round(-dx/n*300),b:0,g:0,touch:1}); pop(); csend({t:'s1',ts0,ts1:t,p:Math.round(p*10)/10,dx:dx/n,dy:dy/n,dz:0,ra:0,rb:0,rg:Math.round(-dx/n*300),b:0,g:0,touch:1}); C.hist.push({t,mag:p,ax:dx/n,ay:dy/n,az:0,ra:0,rb:0,rg:-dx/n*300}); flash(); $('#cMeter i').style.width='0%'; };
   el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
   setInterval(()=>{ if(C.touch&&!down){ MI.v.multiplyScalar(.85); MI.p.multiplyScalar(.9); } },33);
+})();
+/* --- virtual joystick (tanks) --- */
+(function(){ const el=$('#cJoy'), knob=el.querySelector('.knob'); let id=null, cx=0, cy=0, lastSend=0, cur={x:0,y:0};
+  const send=(force)=>{ const t=performance.now(); if(force||t-lastSend>50){ lastSend=t; csend({t:'j',x:Math.round(cur.x*100)/100,y:Math.round(cur.y*100)/100}); } };
+  el.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); id=e.pointerId; const r=el.getBoundingClientRect(); cx=r.left+r.width/2; cy=r.top+r.height/2; try{el.setPointerCapture(id);}catch(x){} move(e); });
+  const move=e=>{ if(e.pointerId!==id)return; const r=el.getBoundingClientRect(); const R=r.width/2-10; let dx=e.clientX-cx, dy=e.clientY-cy; const d=Math.hypot(dx,dy); if(d>R){ dx*=R/d; dy*=R/d; } knob.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`; cur={x:dx/R,y:-dy/R}; send(false); };
+  const up=e=>{ if(e.pointerId!==id)return; id=null; knob.style.transform='translate(-50%,-50%)'; cur={x:0,y:0}; send(true); };
+  el.addEventListener('pointermove',move); el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
+  setInterval(()=>{ if(id!=null)send(true); },100);
 })();
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&C.state==='pad'){ navigator.wakeLock&&navigator.wakeLock.request('screen').then(w=>C.wl=w).catch(()=>{}); if(!C.connected)ctrlConnect(); } });

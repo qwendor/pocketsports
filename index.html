@@ -13,7 +13,8 @@
 <style>
 :root{--red:#ff5a5f;--blue:#2f80ff;--green:#37c95c;--yellow:#ffc233;--ink:#1c2430;--sky:#8fd3ff;--sky2:#e8f7ff;--panel:rgba(255,255,255,.92);--shadow:0 12px 40px rgba(20,50,90,.18)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;overflow:hidden;background:#dff2ff;color:var(--ink);font-family:Nunito,system-ui,sans-serif;font-weight:700}
+html,body{margin:0;height:100%;overflow:hidden;background:#dff2ff;color:var(--ink);font-family:Nunito,system-ui,sans-serif;font-weight:700;touch-action:manipulation}
+#gl,#cPad,#cMain,#cBtns,#cSwipe,#cJoy{touch-action:none}
 h1,h2,h3,.fk{font-family:Fredoka,Nunito,sans-serif;font-weight:700;letter-spacing:.5px}
 button{font:inherit;cursor:pointer;border:0;border-radius:16px;padding:14px 26px;font-weight:900;background:var(--blue);color:#fff;box-shadow:0 6px 0 #1a5fd6,0 10px 20px rgba(0,0,0,.12);transition:transform .08s,box-shadow .08s}
 button:active{transform:translateY(4px);box-shadow:0 2px 0 #1a5fd6}
@@ -174,6 +175,17 @@ button.sec:active{box-shadow:0 2px 0 #c9d6e6}
 #cIcon img{width:110px;height:110px;object-fit:contain}
 #cPop{position:absolute;left:50%;top:16%;transform:translate(-50%,-50%) scale(.5);font-family:Fredoka;font-size:46px;color:var(--blue);text-shadow:0 3px 0 #fff,0 6px 14px rgba(0,0,0,.15);opacity:0;pointer-events:none;transition:transform .1s,opacity .1s;z-index:3}
 #cPop.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#cJoy{position:absolute;left:14px;bottom:14px;width:150px;height:150px;border-radius:50%;background:rgba(47,128,255,.15);border:3px solid rgba(47,128,255,.5);z-index:3;display:none}
+#cJoy.on{display:block}
+#cJoy .knob{position:absolute;left:50%;top:50%;width:64px;height:64px;border-radius:50%;background:var(--blue);box-shadow:0 4px 0 #1a5fd6;transform:translate(-50%,-50%)}
+#cJoy .lbl{position:absolute;left:0;right:0;top:-22px;text-align:center;font-size:11px;letter-spacing:2px;color:#6b7c93}
+#cMain.joy #cBtns{position:absolute;right:14px;bottom:14px;width:150px;flex-direction:column}
+#cMain.joy #cBtns .cbtn{min-height:150px;border-radius:50%;flex-basis:auto}
+#cMain.joy #cIcon,#cMain.joy #cMeter,#cMain.joy #cMotion{display:none}
+#cMain.joy #cTitle,#cMain.joy #cSub{margin-top:-30vh}
+#vsplit{position:absolute;left:50%;top:0;bottom:0;width:4px;background:#fff;transform:translateX(-50%);pointer-events:none;display:none}
+#vsplit.on{display:block}
+.splitname{position:absolute;top:18px;font-family:Fredoka;font-size:clamp(18px,2.4vw,30px);color:#fff;text-shadow:0 3px 0 rgba(0,0,0,.3)}
 #cCal{position:absolute;inset:0;background:var(--panel);z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;text-align:center}
 #cCal .ph{width:70px;height:130px;border-radius:14px;border:4px solid var(--ink);position:relative;animation:phoneTilt 2.4s ease-in-out infinite}
 #cCal .ph:after{content:'';position:absolute;left:50%;top:-16px;width:0;height:0;border:8px solid transparent;border-bottom-color:var(--blue);transform:translateX(-50%)}
@@ -238,6 +250,7 @@ button.sec:active{box-shadow:0 2px 0 #c9d6e6}
       <div id="gauge" class="hidden"><i></i></div>
       <div id="chips"></div>
       <div id="lab" class="hidden"></div>
+      <div id="vsplit"></div>
     </div>
     <div id="banner"><div class="t"></div><div class="s"></div></div>
     <div id="results" class="screen hidden">
@@ -270,6 +283,7 @@ button.sec:active{box-shadow:0 2px 0 #c9d6e6}
       <div id="cMotion">MOTION</div>
       <div id="cBtns"></div>
       <div id="cSwipe"><div id="cSwipeHint">TOUCH MODE: swipe here to swing</div></div>
+      <div id="cJoy"><div class="lbl">MOVE</div><div class="knob"></div></div>
       <div id="cFlash"></div>
       <div id="cCal" class="hidden"><div class="ph"></div><h3>Calibrate</h3><p>Hold the phone flat like a TV remote, screen up, with the top edge pointing at the TV. Then tap CALIBRATE. Tilting the phone up and down, left and right, and rolling your wrist will move your hand on screen.</p><button class="big" id="cCalBtn">CALIBRATE</button><button class="sec" id="cCalSkip">LATER</button></div>
       <div id="cPop">SWING!</div>
@@ -418,6 +432,7 @@ function onCtrlMsg(c,m){
       onSwing(p,sw); break; }
     case 'o': p.orient={a:m.a||0,b:m.b||0,g:m.g||0}; if(G.sport&&G.sport.onOrient)G.sport.onOrient(p); break;
     case 'm': ctrlOf(p).packet(m.d); p.hasMotion=true; break;
+    case 'j': p.joy={x:clamp(m.x||0,-1,1),y:clamp(m.y||0,-1,1)}; break;
     case 'cal': ctrlOf(p).calibrated=true; toast(p.name+' calibrated'); AUD.tick(); if(G.sport&&G.sport.onCalibrate)G.sport.onCalibrate(p); break;
     case 'b': p.btn[m.id]=!!m.d; onBtn(p,m.id,!!m.d,m); break;
     case 'pong': { const r=now()-m.hs; p.rtts=(p.rtts||[]).concat([r]).slice(-6); p.rtt=Math.min(...p.rtts); p.owd=clamp(p.rtt/2,0,.15); break; }
@@ -471,7 +486,7 @@ function startSport(id){
   ['#hudTL','#hudTC','#hudTR','#hudB'].forEach(s=>$(s).innerHTML=''); $('#bowlcard').classList.add('hidden'); $('#golfcard').classList.add('hidden'); $('#minimap').classList.add('hidden'); $('#gauge').classList.add('hidden');
   buildChips(); const s=SPORTS[id]; G.sport=Object.create(s); G.sport.build(G.players.slice()); AUD.init();
 }
-function disposeSport(){ if(G.sport){ try{G.sport.dispose&&G.sport.dispose();}catch(e){} G.sport=null; } if(R.scene){ R.scene=null; } hideBanner(); $('#hud').classList.add('hidden'); }
+function disposeSport(){ R.views=null; $('#vsplit').classList.remove('on'); if(G.sport){ try{G.sport.dispose&&G.sport.dispose();}catch(e){} G.sport=null; } if(R.scene){ R.scene=null; } hideBanner(); $('#hud').classList.add('hidden'); }
 function endSport(rows,title){
   // rows: [{p:player|null,name,color,score:'text',val:number}] sorted best first
   G.state='results'; $('#resTitle').textContent=title||SPORTS[G.sportId].name+' results';
@@ -523,7 +538,9 @@ function newScene(o={}){
   const sun=new THREE.DirectionalLight(0xffffff,o.sun!=null?o.sun:.95); sun.position.set(o.sunX||20,o.sunY||40,o.sunZ||15); sun.castShadow=true; const sz=o.shadow||30; sun.shadow.camera.left=-sz; sun.shadow.camera.right=sz; sun.shadow.camera.top=sz; sun.shadow.camera.bottom=-sz; sun.shadow.camera.near=1; sun.shadow.camera.far=200; sun.shadow.mapSize.set(2048,2048); sun.shadow.bias=-.0008; s.add(sun); s.add(sun.target); R.sun=sun;
   R.scene=s; return s;
 }
-function render(){ if(!R.scene||!R.renderer)return; R.renderer.render(R.scene,R.cam); }
+function render(){ if(!R.scene||!R.renderer)return; const r=R.renderer;
+  if(R.views&&R.views.length>1){ const W=innerWidth,H=innerHeight,n=R.views.length; r.setScissorTest(true); R.views.forEach((v,i)=>{ const w=W/n; r.setViewport(i*w,0,w,H); r.setScissor(i*w,0,w,H); v.cam.aspect=w/H; v.cam.updateProjectionMatrix(); r.render(R.scene,v.cam); }); r.setScissorTest(false); r.setViewport(0,0,W,H); return; }
+  r.render(R.scene,R.cam); }
 function camLerp(pos,look,k=.1){ R.camPos.lerp(pos,k); R.camLook.lerp(look,k); R.cam.position.copy(R.camPos); R.cam.lookAt(R.camLook); }
 function camSet(pos,look){ R.camPos.copy(pos); R.camLook.copy(look); R.cam.position.copy(pos); R.cam.lookAt(look); }
 const V3=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
@@ -579,13 +596,13 @@ function makeMii(color,name,opts={}){
     // tracked tools live in toolG (positioned at the hand each frame by hold()), built along +z (tool direction) with the face normal +y
     setTrackedTool(kind){ toolG.clear(); this.tracked=!!kind; toolG.visible=!!kind; for(const s of['L','R'])arms[s].tool.clear(); this.tool=kind; if(!kind)return; const add=m=>toolG.add(m); const rx=m=>{ m.rotation.x=Math.PI/2; return m; };
       if(kind==='racket'){ const h=rx(cyl(.02,.02,.32,0x222222)); h.position.z=.16; add(h); const hd=mesh(new THREE.TorusGeometry(.17,.02,8,24),0xdddddd); hd.rotation.x=Math.PI/2; hd.position.z=.5; add(hd); const st=mesh(new THREE.CircleGeometry(.16,24),0xffffff,{m:{transparent:true,opacity:.35,side:THREE.DoubleSide},cast:false}); st.rotation.x=-Math.PI/2; st.position.z=.5; add(st); }
-      if(kind==='bat'){ const b=rx(cyl(.02,.038,.86,0xc98d55)); b.position.z=.43; add(b); }
+      if(kind==='bat'){ const b=rx(cyl(.028,.052,1.12,0xc98d55,14)); b.position.z=.56; add(b); const k=rx(cyl(.045,.045,.05,0x333333)); k.position.z=.02; add(k); const tape=rx(cyl(.03,.03,.22,0x222222)); tape.position.z=.15; add(tape); }
       if(kind==='club'){ const sh=rx(cyl(.013,.013,.95,0xbbbbbb)); sh.position.z=.47; add(sh); const hd=box(.09,.05,.06,0x444444); hd.position.set(.03,-.03,.95); add(hd); }
       if(kind==='ball'){ const b=sph(.108,0x1b1f3b,{phong:true}); b.position.z=.12; add(b); this.ballMesh=b; }
       if(kind==='basketball'){ const b=sph(.12,0xe8772e,{phong:true}); b.position.z=.14; add(b); this.ballMesh=b; }
       if(kind==='glove'){ const gl=sph(.15,0xd63a48,{phong:true}); add(gl); }
       if(kind==='phone'){ const ph=box(.075,.009,.155,0x1c2430); ph.position.z=.078; add(ph); const sc=box(.064,.002,.135,0x2f80ff,{m:{emissive:0x1a4fa0}}); sc.position.set(0,.0045,.078); add(sc); const tip=mesh(new THREE.ConeGeometry(.02,.05,8),0xffc233); tip.rotation.x=Math.PI/2; tip.position.z=.18; add(tip); }
-      if(kind==='sword'){ const bl=box(.05,.008,.9,0xdde3ea,{phong:true}); bl.position.z=.5; add(bl); const gd=box(.16,.02,.03,0xffc233); gd.position.z=.05; add(gd); }
+      if(kind==='sword'){ const bl=box(.06,.012,1.0,0xdde3ea,{phong:true}); bl.position.z=.56; add(bl); const edge=box(.02,.016,1.0,0xffffff,{phong:true}); edge.position.z=.56; add(edge); const gd=box(.2,.03,.04,0xffc233); gd.position.z=.06; add(gd); const grip=rx(cyl(.025,.025,.14,0x5a3a1a)); grip.position.z=-.02; add(grip); }
     },
     // place the tracked hand: handLocal = shoulder-relative offset (mii-local), qLocal = tool orientation (mii-local)
     hold(handLocal,qLocal,side='R',maxLen){ const a=arms[side].g; const sh=a.position; const d=_hold1.copy(handLocal); const len=Math.min(d.length(),maxLen||.7); d.normalize(); const hand=_hold2.copy(sh).addScaledVector(d,len); a.quaternion.setFromUnitVectors(_hold3.set(0,-1,0),d); toolG.position.copy(hand); toolG.quaternion.copy(qLocal).multiply(TOOL_FIX); return hand; },
@@ -595,6 +612,7 @@ function makeMii(color,name,opts={}){
       if(kind==='club'){ const sh=cyl(.013,.013,.95,0xbbbbbb); sh.position.y=-.47; add(sh); const hd=box(.09,.06,.05,0x444444); hd.position.set(.03,-.95,.02); add(hd); }
       if(kind==='ball'){ const b=sph(.108,0x1b1f3b,{phong:true}); b.position.y=-.12; add(b); this.ballMesh=b; }
       if(kind==='gloves'){ for(const s of['L','R']){ const gl=sph(.15,0xd63a48,{phong:true}); gl.position.y=-.05; arms[s].tool.add(gl); } }
+      if(kind==='sword'){ const bl=box(.06,.012,1.0,0xdde3ea,{phong:true}); bl.position.y=-.56; add(bl); const gd=box(.2,.03,.04,0xffc233); gd.position.y=-.06; add(gd); }
     },
     arm(side,x,y,z){ const a=arms[side].g; a.rotation.set(x,y,z+(arms[side].sx*-.18)); },
     lookAt(x,z){ this.g.rotation.y=Math.atan2(x-this.g.position.x,z-this.g.position.z); },
@@ -671,7 +689,7 @@ function aimFrom(sp,p){ const o=p.orient; if(sp.yaw0==null)sp.yaw0=o.a; let d=o.
 function cpuPlayer(name,color){ return {slot:-1,name,color,cname:'CPU',cpu:true,fake:true,inbox:[],btn:{},orient:{a:0,b:0,g:0}}; }
 // is this player driving a live tracked controller (vs. touch/legacy swing events)?
 function tracked(p){ return !p.cpu&&p.ctrl&&p.ctrl.live; }
-const TENNIS_CFG={hitRadius:.38,assistRadius:.8,assistSpeed:3,vAssist:1.0,restitution:.75,minSpeed:10,maxSpeed:27,spinGain:.14,maxAngle:38,paceBase:6,paceGain:1.6,faceWeight:1.0,swingWeight:.7};
+const TENNIS_CFG={hitRadius:.55,assistRadius:1.0,assistSpeed:2.5,vAssist:1.3,restitution:.75,minSpeed:9,maxSpeed:24,spinGain:.14,maxAngle:36,paceBase:6,paceGain:1.5,faceWeight:1.0,swingWeight:.7};
 
 /* ============================== TENNIS ============================== */
 SPORTS.tennis={
@@ -701,7 +719,7 @@ SPORTS.tennis={
     this.ball={pos:V3(0,1,0),vel:V3(),active:false,lastTeam:-1,sideB:0,netHit:false,spin:0,z2:null};
     this.ballM=sph(this.BR,0xd8f542,{phong:true},12); s.add(this.ballM); this.shadow=ballShadow(s);
     this.hitFx=sph(.18,0xffffff,{m:{transparent:true,opacity:.6},cast:false},10); this.hitFx.visible=false; s.add(this.hitFx);
-    camSet(V3(0,7.5,19.5),V3(0,.5,-3));
+    camSet(V3(0,5.2,15.6),V3(0,.6,-3.5));
     this.serveSetup(); this.hudScore(); this.phones();
   },
   addChar(p,ti){ const t=this.T[ti]; const mii=makeMii(p.color,p.name); mii.baseExpr='determined'; mii.face('determined'); R.scene.add(mii.g);
@@ -732,7 +750,7 @@ SPORTS.tennis={
     }));
     this.ballM.position.copy(b.pos); this.ballM.visible=b.active||this.state!=='rally'; placeShadow(this.shadow,b.pos); this.shadow.visible=b.active;
     if(this.hitFx.visible){ this.hitFx.scale.multiplyScalar(1+6*dt); this.hitFx.material.opacity-=2.5*dt; if(this.hitFx.material.opacity<=0)this.hitFx.visible=false; }
-    camLerp(V3(clamp(b.pos.x*.25,-2,2),7.5,19.5),V3(clamp(b.pos.x*.3,-2,2),.5,-3),.05);
+    camLerp(V3(clamp(b.pos.x*.3,-2.5,2.5),5.2,15.6),V3(clamp(b.pos.x*.35,-2.5,2.5),.6,-3.5),.05);
   },
   // ---- tracked racket: the rig follows the phone, and the ball collides with the racket head ----
   trackHand(c,dt){ const ctrl=c.ctrl; if(!ctrl.live){ if(c.mii.tracked){ c.mii.setTool('racket'); } return; } if(!c.mii.tracked)c.mii.setTrackedTool('racket');
@@ -740,7 +758,7 @@ SPORTS.tennis={
     const b=this.ball; if(!b.active||c.hitCd>0)return; const ti=c.team; if(b.lastTeam===ti)return; if(this.state==='point')return;
     if(this.state==='serve'&&(this.serverChar()!==c||!this.tossed))return;
     const head=c.tr.pos; const dx=b.pos.x-head.x, dy=b.pos.y-head.y, dz=b.pos.z-head.z; const dh=Math.hypot(dx,dz); const fast=c.tr.speed>TENNIS_CFG.assistSpeed;
-    const r=fast?TENNIS_CFG.assistRadius:TENNIS_CFG.hitRadius; if(dh>r||Math.abs(dy)>(fast?TENNIS_CFG.vAssist:.5))return;
+    const r=fast?TENNIS_CFG.assistRadius:TENNIS_CFG.hitRadius; if(dh>r||Math.abs(dy)>(fast?TENNIS_CFG.vAssist:.7))return;
     this.hitPhysical(c); },
   hitPhysical(c){ const K=TENNIS_CFG, b=this.ball, side=c.side; const hv=c.tr.vel; const serve=this.state==='serve';
     const n=_tn2.set(0,1,0).applyQuaternion(c.mii.toolG.getWorldQuaternion(_tq)); // racket face normal (world)
@@ -783,7 +801,7 @@ SPORTS.tennis={
   },
   hit(c,dt,pw,serve){ const b=this.ball, side=c.side; const k=clamp(dt/.3,-1,1); pw=clamp(pw,.3,1.6);
     let tx=side*k*(serve?3.6:4.7)+rnd(-.35,.35), tz=-side*(serve?(3.6+2.5*Math.random()):(6.3+4.6*clamp(pw,.5,1.4)/1.4+rnd(-.6,.6)+(pw>1.4?rnd(0,1.6):0)));
-    const vh=serve?15+4*pw:11+9*clamp(pw,.3,1.6)/1.6; this.launch(c,tx,tz,vh,0); if(!c.cpu)buzz(c.p,60); },
+    const vh=serve?13+3*pw:9+8*clamp(pw,.3,1.6)/1.6; this.launch(c,tx,tz,vh,0); if(!c.cpu)buzz(c.p,60); },
   point(ti,why){ if(this.state==='point')return; this.state='point'; this.stateT=0; (this.log=this.log||[]).push(why+':'+ti); const t=this.T[ti]; this.pts[ti]++; AUD.cheer(); let txt=why, sub=t.name+' wins the point';
     const a=this.pts[ti],o=this.pts[1-ti]; if(a>=4&&a-o>=2){ this.games[ti]++; this.pts=[0,0]; this.server=1-this.server; txt='GAME'; sub=t.name+' wins the game'; if(this.games[ti]>=2){ txt='MATCH'; sub=t.name+' wins the match!'; this.over=ti; } }
     banner(txt,sub,1.8,ti===0?'':'red'); this.hudScore(); this.T[1-ti].chars.forEach(c=>c.mii.face('sad',2)); t.chars.forEach(c=>{ c.mii.face('cheer',2); if(!c.cpu)buzz(c.p,150); if(!c.mii.tracked)c.mii.play('cheer',1.2,(m,k)=>{ m.arm('R',-2.6-Math.sin(k*20)*.3,0,0); m.arm('L',-2.6+Math.sin(k*20)*.3,0,0); m.body.position.y=Math.abs(Math.sin(k*12))*.18; }); }); },
@@ -798,7 +816,7 @@ SPORTS.tennis={
 const _tn=new THREE.Vector3(), _tn2=new THREE.Vector3(), _tv=new THREE.Vector3(), _tq=new THREE.Quaternion();
 /* ============================== BOWLING ============================== */
 const PINSPOTS=[[0,0],[-.1524,-.264],[.1524,-.264],[-.3048,-.528],[0,-.528],[.3048,-.528],[-.4572,-.792],[-.1524,-.792],[.1524,-.792],[.4572,-.792]];
-const BOWL_CFG={rest:[.3,-.35,.25],speedGain:1.25,minSpeed:4,maxSpeed:11.5,aimMaxDeg:10,autoReleaseSpeed:2.6,autoReleaseY:1.25,spinGain:1/6,aimBlend:.5};
+const BOWL_CFG={rest:[.3,-.35,.25],speedGain:1.25,minSpeed:4,maxSpeed:11.5,aimMaxDeg:10,autoReleaseSpeed:2.6,autoReleaseY:1.25,spinGain:1/12,aimBlend:.5};
 function bowlScore(fr){ // fr = array of frames, each an array of rolls; returns {cum:[...], total}
   const rolls=[]; fr.forEach((f,i)=>f.forEach(r=>{rolls.push(r);}));
   const cum=[]; let total=0, k=0;
@@ -812,7 +830,7 @@ function bowlScore(fr){ // fr = array of frames, each an array of rolls; returns
 }
 SPORTS.bowling={
   name:'Bowling',icon:'🎳',players:'1-4 players',FRAMES:10,BR:.108,PR:.058,
-  how:['Your hand and the ball follow the phone. Point the phone down the lane to aim (the dotted line shows it).','Swing your arm back and forward like a real bowl. The ball leaves your hand at the bottom of the forward swing, with your hand speed and direction.','Hold GRIP on the phone if you want to choose the exact release moment yourself; let go to release.','Twist your wrist as you release to hook the ball. 10 frames, highest score wins.'],
+  how:['Point the phone down the lane to aim (the dotted line follows it), then tap LOCK AIM on your phone.','Now swing your arm back and forward like a real bowl. The ball leaves your hand at the bottom of the forward swing; a faster swing throws harder.','Twist your wrist as you release to hook the ball.','10 frames, highest score wins.'],
   who:n=>n<=1?'Solo game, 10 frames':n+' players take turns, 10 frames each',
   build(players){
     const s=newScene({sky:0x2a3550,fog:false,shadow:14,sunX:6,sunY:18,sunZ:-4,hemi:.3,sun:.55,hemiSky:0x8fa3c8,hemiGround:0x222a3a});
@@ -839,19 +857,21 @@ SPORTS.bowling={
   pinMesh(){ const g=new THREE.Group(); const b=cyl(.045,.058,.3,0xffffff,12); b.position.y=.15; g.add(b); const n=cyl(.03,.045,.08,0xffffff,12); n.position.y=.33; g.add(n); const h=sph(.04,0xffffff,{},10); h.position.y=.37; g.add(h); const st=mesh(new THREE.TorusGeometry(.046,.012,6,16),0xe0313f); st.rotation.x=Math.PI/2; st.position.y=.3; g.add(st); return g; },
   setPins(fresh){ if(fresh){ this.pins.forEach(p=>R.scene.remove(p.m)); this.pins=PINSPOTS.map(([x,z],i)=>{ const m=this.pinMesh(); m.position.set(x,0,-18.29+z); R.scene.add(m); return {i,x,z:-18.29+z,ox:x,oz:-18.29+z,vx:0,vz:0,up:true,fallT:0,m,gone:false,rot:0,dir:0,drop:0}; }); }
     else { this.pins=this.pins.filter(p=>{ if(!p.up){ R.scene.remove(p.m); return false; } p.ox=p.x; p.oz=p.z; p.vx=p.vz=0; return true; }); } },
-  beginTurn(){ this.state='aim'; this.stateT=0; const p=this.players[this.pi]; this.ball.active=false; this.ball.gutter=false; this.ballM.visible=false; this.hold=false; this.holdT=0; this.aim=0; this.released=false; this.yaw0=null; this.armed=false; this.peak=0; this.vPeak=new THREE.Vector3(); this.tr=new PointTracker();
+  beginTurn(){ this.state='aim'; this.stateT=0; const p=this.players[this.pi]; this.ball.active=false; this.ball.gutter=false; this.ballM.visible=false; this.hold=false; this.holdT=0; this.aim=0; this.released=false; this.yaw0=null; this.armed=false; this.locked=false; this.peak=0; this.vPeak=new THREE.Vector3(); this.tr=new PointTracker();
     this.miis.forEach((m,i)=>{ m.g.visible=i===this.pi; m.g.position.set(tracked(this.players[i])?.62:0,0,tracked(this.players[i])?1.9:2.6); m.g.rotation.y=Math.PI; m.arm('R',0,0,0); m.arm('L',0,0,0); m.body.rotation.y=0; m.body.rotation.x=0; m.anim=null; m.rest=null; if(m.ballMesh)m.ballMesh.visible=true; });
     if(p.cpu){ this.cpuAt=this.t+1.5; }
     hud('B',turnBox(p,`Frame ${this.fi+1} · ${this.roll===0?'1st':this.roll===1?'2nd':'3rd'} ball`));
     this.phones(); this.card(); },
-  phones(){ this.players.forEach((p,i)=>{ if(p.cpu)return; if(i===this.pi)phoneUI(p,{mode:'bowl',icon:'🎳',title:'Your turn',sub:'Point the phone down the lane to aim. Swing your arm back and forward; the ball leaves at the bottom of the swing (or hold GRIP and let go).',btns:[{id:'hold',label:'HOLD GRIP · RELEASE TO THROW',hold:1},{id:'recenter',label:'RECENTER',sec:1}],rate:15}); else phoneUI(p,{mode:'wait',icon:'🎳',title:'Waiting',sub:this.players[this.pi].name+' is bowling. Frame '+(this.fi+1),btns:[],rate:3}); }); },
+  phones(){ this.players.forEach((p,i)=>{ if(p.cpu)return; if(i===this.pi){ if(!this.locked)phoneUI(p,{mode:'bowl',icon:'🎳',title:'Aim',sub:'Point the phone down the lane to move the aim line, then tap LOCK AIM.',btns:[{id:'lock',label:'LOCK AIM',on:1},{id:'recenter',label:'RECENTER',sec:1}],rate:15}); else phoneUI(p,{mode:'bowl',icon:'🎳',title:'Swing!',sub:'Swing your arm back and forward like a bowl. The ball releases at the bottom of the swing; faster = harder. Twist your wrist to hook it.',btns:[{id:'unlock',label:'RE-AIM',sec:1}],rate:15}); } else phoneUI(p,{mode:'wait',icon:'🎳',title:'Waiting',sub:this.players[this.pi].name+' is bowling. Frame '+(this.fi+1),btns:[],rate:3}); }); },
   card(){ const el=$('#bowlcard'); el.classList.remove('hidden'); let h='<table><tr><th></th>'+Array.from({length:10},(_,i)=>'<th>'+(i+1)+'</th>').join('')+'<th>Total</th></tr>';
     this.players.forEach((p,pi)=>{ const fr=this.frames[pi]; const sc=bowlScore(fr); h+=`<tr class="${pi===this.pi?'cur':''}"><td class="nm" style="--c:${p.color}">${esc(p.name)}</td>`;
       for(let f=0;f<10;f++){ const r=fr[f]||[]; const marks=r.map((v,i)=>{ if(v===10)return 'X'; if(i>0&&r[i-1]!==10&&r[i-1]+v===10)return '/'; if(f===9&&i===2&&r[1]!==10&&r[1]+v===10)return '/'; return v===0?'-':v; }); h+=`<td><div class="r">${marks.map(m=>'<span>'+m+'</span>').join('')||'&nbsp;'}</div><div class="t">${sc.cum[f]!=null?sc.cum[f]:'&nbsp;'}</div></td>`; }
       h+=`<td class="t">${sc.total}</td></tr>`; });
     el.innerHTML=h+'</table>'; },
   onOrient(p){ if(this.players[this.pi]===p&&this.state==='aim'&&!tracked(p)){ this.aim=aimFrom(this,p); } },
-  onBtn(p,id,down,m){ if(this.players[this.pi]!==p||this.state!=='aim')return; if(id==='recenter'&&down){ this.yaw0=null; this.aim=0; return; } if(id!=='hold')return;
+  onBtn(p,id,down,m){ if(this.players[this.pi]!==p||this.state!=='aim')return; if(id==='recenter'&&down){ this.yaw0=null; this.aim=0; return; }
+    if(id==='lock'&&down){ this.locked=true; this.peak=0; this.stateT=0; this.phones(); AUD.tick(); return; } if(id==='unlock'&&down){ this.locked=false; this.phones(); return; }
+    if(id!=='hold')return;
     if(tracked(p)){ if(down){ this.hold=true; } else if(this.hold&&!this.released){ this.throwTracked(p); } return; }
     if(down){ this.startHold(); } else if(this.hold){ this.throwBall(clamp((m.p||12)/20,.3,1.6),(m.rg||0),(m.dx||0)); } },
   onSwingStart(p){ if(this.players[this.pi]===p&&this.state==='aim'&&!this.hold&&!tracked(p))this.startHold(); },
@@ -859,11 +879,11 @@ SPORTS.bowling={
   // ---- tracked hand: the ball rides in the hand; release from the measured hand velocity ----
   trackHand(p,dt){ const m=this.miis[this.pi], c=p.ctrl, K=BOWL_CFG; rigHand(m,c,this.rest,null,.85); this.tr.update(m.toolG,_bw1.set(0,0,.12),dt);
     const hv=ctrlVelWorld(m,c,_bw2).add(this.tr.vel); const sp=hv.length();
-    if(!this.released){ if(sp<1.5){ const ax=c.axis(); const deg=clamp(Math.atan2(ax.x,-ax.z)*180/Math.PI,-K.aimMaxDeg,K.aimMaxDeg); this.aim=lerp(this.aim,deg/4.5,.25); }
+    if(!this.released){ if(!this.locked){ const ax=c.axis(); const deg=clamp(Math.atan2(ax.x,-ax.z)*180/Math.PI,-K.aimMaxDeg,K.aimMaxDeg); this.aim=lerp(this.aim,deg/4.5,.25); return; }
       if(-hv.z>sp*.5&&sp>this.peak){ this.peak=sp; this.vPeak.copy(hv); }
-      if(!this.hold&&!p.btn.hold&&this.stateT>.8&&this.peak>K.autoReleaseSpeed&&sp<this.peak*.92&&this.tr.pos.y<K.autoReleaseY){ this.throwTracked(p,this.vPeak); } } },
+      if(this.stateT>.5&&this.peak>K.autoReleaseSpeed&&sp<this.peak*.92&&this.tr.pos.y<K.autoReleaseY){ this.throwTracked(p,this.vPeak); } } },
   throwTracked(p,vel){ if(this.released)return; const c=p.ctrl, K=BOWL_CFG; const m=this.miis[this.pi]; const hv=vel?_bw2.copy(vel):ctrlVelWorld(m,c,_bw2).add(this.tr.vel); const sp=Math.hypot(hv.x,hv.z);
-    const speed=clamp(sp*K.speedGain,K.minSpeed,K.maxSpeed); const swingAng=sp>.5?clamp(Math.atan2(hv.x,-hv.z)*180/Math.PI,-K.aimMaxDeg,K.aimMaxDeg):this.aim*4.5; const ang=lerp(this.aim*4.5,swingAng,K.aimBlend);
+    const speed=clamp(sp*K.speedGain,K.minSpeed,K.maxSpeed); const swingAng=sp>.5?clamp(Math.atan2(hv.x,-hv.z)*180/Math.PI,-K.aimMaxDeg,K.aimMaxDeg):this.aim*4.5; const ang=lerp(this.aim*4.5,swingAng,K.aimBlend*.4);
     const ax=c.axis(); const spin=clamp(-c.w.dot(ax)*K.spinGain,-1,1); // wrist twist about the pointing axis hooks the ball
     this.released=true; if(m.ballMesh)m.ballMesh.visible=false; this.launch({speed,spin,ang,x:clamp(this.tr.pos.x,-.35,.35)}); },
   // ---- legacy path (CPU, touch mode): canned approach + release ----
@@ -876,7 +896,7 @@ SPORTS.bowling={
   update(dt){
     this.t+=dt; this.stateT+=dt; const p=this.players[this.pi];
     if(this.state==='aim'){ this.guide.visible=!this.released; this.guide.rotation.y=-this.aim*4.5*Math.PI/180; if(p.cpu&&this.t>this.cpuAt&&!this.hold){ this.aim=(Math.random()<.5?1:-1)*.5+gauss()*.15; this.startHold(); setTimeout(()=>{ if(this.state==='aim')this.throwBall(1+gauss()*.15,0,0); },700); }
-      if(!p.cpu&&tracked(p))this.trackHand(p,dt);
+      if(!p.cpu&&tracked(p))this.trackHand(p,dt); if(this.locked&&!this.released)this.guide.visible=true;
       if(this.hold&&!this.released&&!tracked(p)){ this.holdT+=dt; if(this.holdT>6){ this.throwBall(.8,0,0); } }
       camLerp(V3(2.3+this.aim*.3,2.7,6.4),V3(-.3+this.aim*.5,.5,-8),.06); }
     else if(this.state==='roll'){ this.physics(dt); const b=this.ball; if(!p.cpu&&tracked(p))rigHand(this.miis[this.pi],p.ctrl,this.rest,null,.85); camLerp(V3(b.x*.4,1.5,b.z+4.2),V3(b.x*.2,.25,b.z-7),.08); if(!b.active){ this.state='settle'; this.stateT=0; } }
@@ -889,7 +909,7 @@ SPORTS.bowling={
   physics(dt){ const STEP=1/240; let n=Math.min(60,Math.ceil(dt/STEP)); const h=dt/n; for(let i=0;i<n;i++)this.step(h); },
   step(h){
     const b=this.ball, BR=this.BR, PR=this.PR;
-    if(b.active){ if(!b.gutter){ if(b.z<-7)b.vx+=b.spin*.55*h; b.vx*=(1-.02*h); b.vz*=(1-.015*h); }
+    if(b.active){ if(!b.gutter){ if(b.z<-7)b.vx+=b.spin*.42*h; b.vx*=(1-.02*h); b.vz*=(1-.015*h); }
       b.x+=b.vx*h; b.z+=b.vz*h;
       if(!b.gutter&&Math.abs(b.x)>.525+BR*.35){ b.gutter=true; b.x=Math.sign(b.x)*.66; b.vx=0; b.y=-.06; b.spin=0; AUD.thud(); }
       if(b.z<-19.9||Math.hypot(b.vx,b.vz)<.15){ b.active=false; this.ballM.visible=false; }
@@ -920,10 +940,10 @@ SPORTS.bowling={
 };
 const _bw1=new THREE.Vector3(), _bw2=new THREE.Vector3();
 /* ============================== HOME RUN DERBY ============================== */
-const BASE_CFG={rest:[.28,.12,.15],follow:.8,batLen:.86,sweet:.62,hitR:.26,assistR:.4,assistSpeed:5,minBat:2.5,exitBase:11,exitGain:2.7,maxExit:50,elevBase:14,elevGain:3.2,pullGain:.55};
+const BASE_CFG={rest:[.28,.12,.15],follow:.8,batLen:1.12,sweet:.8,hitR:.36,assistR:.52,assistSpeed:4,minBat:2.5,exitBase:12,exitGain:3.0,maxExit:50,elevBase:14,elevGain:3.2,pullGain:.55};
 SPORTS.baseball={
   name:'Home Run Derby',icon:'⚾',players:'1-4 players',PITCHES:10,FENCE:100,DRAG:.0042,
-  how:['Your bat follows the phone: hold it up like a bat over your shoulder.','The pitcher lobs the ball in. Swing the phone so the bat actually passes through the ball: bat speed sets the exit speed, where you meet it (early = pull, late = opposite field) and an upward swing lifts it.','A slow bat only bunts. Miss the ball and it is a strike.','10 pitches each. Balls over the fence are home runs, most home runs wins (total distance breaks ties).'],
+  how:['Your bat follows the phone: hold it up like a bat over your shoulder.','The pitch crosses the yellow ring. Swing the phone so the bat passes through the ball there: bat speed sets the exit speed, where you meet it (early = pull, late = opposite field) and an upward swing lifts it.','A slow bat only bunts. Miss the ball and it is a strike.','10 pitches each. Balls over the fence are home runs, most home runs wins (total distance breaks ties).'],
   who:n=>n<=1?'10 pitches, beat your best':n+' players alternate pitches, 10 each',
   build(players){
     const s=newScene({sky:0x8fd3ff,shadow:40,sunX:30,sunY:60,sunZ:20,fogNear:150,fogFar:400});
@@ -940,16 +960,18 @@ SPORTS.baseball={
     this.miis=this.players.map(p=>{ const m=makeMii(p.color,p.name); if(p.cpu)m.setTool('bat'); else m.setTrackedTool('bat'); m.baseExpr='determined'; m.face('determined'); m.g.visible=false; m.g.position.set(-.85,0,.15); m.g.rotation.y=Math.PI/2; s.add(m.g); return m; });
     this.pitcher=makeMii('#dddddd','',{}); this.pitcher.g.position.set(0,.3,-18); this.pitcher.g.rotation.y=0; s.add(this.pitcher.g);
     this.catcher=makeMii('#555555','',{}); this.catcher.g.position.set(0,0,1.6); this.catcher.g.rotation.y=Math.PI; this.catcher.g.scale.set(1,.7,1); s.add(this.catcher.g);
-    this.ball={pos:V3(0,1.7,-17.7),vel:V3(),active:false,phase:'none',landed:false}; this.ballM=sph(.075,0xffffff,{phong:true},12); s.add(this.ballM); this.shadow=ballShadow(s);
+    this.ball={pos:V3(0,1.7,-17.7),vel:V3(),active:false,phase:'none',landed:false}; this.ballM=sph(.09,0xffffff,{phong:true},12); s.add(this.ballM); this.shadow=ballShadow(s);
+    this.zone=mesh(new THREE.TorusGeometry(.42,.03,8,32),0xffc233,{m:{transparent:true,opacity:.75},cast:false}); this.zone.position.set(0,1.05,.15); s.add(this.zone); const zin=mesh(new THREE.CircleGeometry(.42,32),0xffc233,{m:{transparent:true,opacity:.12,side:THREE.DoubleSide},cast:false}); zin.position.copy(this.zone.position); s.add(zin);
+    this.trail=[]; for(let i=0;i<8;i++){ const t=sph(.05,0xffffff,{m:{transparent:true,opacity:.35},cast:false,recv:false},6); t.visible=false; s.add(t); this.trail.push(t); } this.hitStop=0;
     this.tr=new PointTracker(); this.rest=new THREE.Vector3(...BASE_CFG.rest);
-    camSet(V3(0,2.6,7),V3(0,1.4,-14)); this.hudScore(); this.beginPitch();
+    camSet(V3(-2.6,2.5,3.8),V3(-.1,1.0,-4)); this.hudScore(); this.beginPitch();
   },
   cur(){ return this.players[this.turn]; },
   phones(){ this.players.forEach((p,i)=>{ if(p.cpu)return; if(i===this.turn)phoneUI(p,{mode:'base',icon:'⚾',title:'Batter up!',sub:'Your bat follows the phone. Hold it over your shoulder and swing through the pitch.',btns:[{id:'recenter',label:'RECENTER',sec:1}],rate:3}); else phoneUI(p,{mode:'wait',icon:'⚾',title:'Waiting',sub:this.cur().name+' is batting.',btns:[],rate:3}); }); },
   beginPitch(){ this.state='windup'; this.stateT=0; this.ball.active=false; this.ball.phase='none'; this.swung=false; this.tr=new PointTracker(); this.miis.forEach((m,i)=>{ m.g.visible=i===this.turn; m.anim=null; m.rest=mii=>{ if(mii.tracked){ mii.arm('L',-1.9,.5,.4); return; } mii.arm('R',-2.2,-.6,-.3); mii.arm('L',-1.9,.5,.4); mii.body.rotation.y=lerp(mii.body.rotation.y,.25,.1); }; });
     const p=this.cur(); if(p.cpu)this.cpuDt=gauss()*.06; hud('B',turnBox(p,`Pitch ${this.round+1} of ${this.PITCHES}`)); this.phones();
     this.pitcher.play('windup',1.3,(m,k)=>{ m.arm('R',-k*2.6,0,-.4*k); m.arm('L',-1.2*Math.sin(k*Math.PI),0,.6); m.body.rotation.x=-.2*Math.sin(k*Math.PI); m.headG.rotation.x=.1*k; }); },
-  pitch(){ const b=this.ball; b.pos.set(.3,1.85,-17.6); const T=1.1; const tx=0,ty=1.05,tz=.15; b.vel.set((tx-b.pos.x)/T,(ty-b.pos.y+.5*9.8*T*T)/T,(tz-b.pos.z)/T); b.active=true; b.phase='pitch'; this.ideal=this.t+T; this.state='pitch'; this.stateT=0; AUD.swish(); this.pitcher.play('throw',.5,(m,k)=>{ m.arm('R',lerp(-2.6,.6,easeOut(k)),0,-.4*(1-k)); m.body.rotation.x=.2*Math.sin(k*Math.PI); }); const p=this.cur(); if(p.cpu)this.cpuAt=this.ideal+this.cpuDt; },
+  pitch(){ const b=this.ball; b.pos.set(.3,1.85,-17.6); const T=1.25; const tx=0,ty=1.05,tz=.15; b.vel.set((tx-b.pos.x)/T,(ty-b.pos.y+.5*9.8*T*T)/T,(tz-b.pos.z)/T); b.active=true; b.phase='pitch'; this.ideal=this.t+T; this.state='pitch'; this.stateT=0; AUD.swish(); this.pitcher.play('throw',.5,(m,k)=>{ m.arm('R',lerp(-2.6,.6,easeOut(k)),0,-.4*(1-k)); m.body.rotation.x=.2*Math.sin(k*Math.PI); }); const p=this.cur(); if(p.cpu)this.cpuAt=this.ideal+this.cpuDt; },
   animSwing(m){ if(m.tracked)return; if(m.anim&&m.anim.name==='swing'&&m.anim.t<.3)return; AUD.whoosh(); m.play('swing',.45,(mii,k)=>{ const e=easeOut(k); mii.arm('R',lerp(-2.2,-1.4,e),lerp(-.6,1.9,e),-.3); mii.arm('L',lerp(-1.9,-1.3,e),lerp(.5,2.2,e),.4); mii.body.rotation.y=lerp(.25,-1.1,e); mii.headG.rotation.y=-.4*e; }); },
   onSwingStart(p){ if(this.cur()===p&&!tracked(p)&&(this.state==='pitch'||this.state==='windup'))this.animSwing(this.miis[this.turn]); },
   onSwing(p,sw){ if(this.cur()!==p||tracked(p))return; this.swing(sw.start,sw.pw,sw); },
@@ -966,7 +988,7 @@ SPORTS.baseball={
     const timing=clamp((b.pos.z-.15)/-.9,-1,1); const pull=timing*K.pullGain*50; let batAz=Math.atan2(hv.x,-hv.z)*180/Math.PI; if(!isFinite(batAz)||sp<1)batAz=0; batAz=clamp(batAz,-60,60);
     const th=(lerp(pull,batAz,.5)+gauss()*3)*Math.PI/180; const ph=clamp(K.elevBase+hv.y*K.elevGain+8*q+gauss()*4,4,60)*Math.PI/180;
     const v=clamp(K.exitBase+sp*K.exitGain*q,8,K.maxExit);
-    b.vel.set(Math.sin(th)*Math.cos(ph)*v,Math.sin(ph)*v,-Math.cos(th)*Math.cos(ph)*v); b.phase='hit'; b.landed=false; b.pos.z=Math.min(b.pos.z,.2); this.state='hit'; this.stateT=0; AUD.crack(); const p=this.cur(); if(!p.cpu)buzz(p,120); },
+    b.vel.set(Math.sin(th)*Math.cos(ph)*v,Math.sin(ph)*v,-Math.cos(th)*Math.cos(ph)*v); b.phase='hit'; b.landed=false; b.pos.z=Math.min(b.pos.z,.2); this.state='hit'; this.stateT=0; AUD.crack(); const p=this.cur(); if(!p.cpu)buzz(p,120); this.hitStop=.14; banner(q>.85?'CRACK!':'CONTACT',Math.round(v*3.6)+' km/h',.9,q>.85?'gold':''); },
   swing(start,pw,sw){ if(this.swung||this.state!=='pitch'&&this.state!=='windup')return; const m=this.miis[this.turn]; if(this.state==='windup'){ this.animSwing(m); return; } this.swung=true; this.animSwing(m);
     const dt=start-this.ideal; const q=Math.abs(dt)<=.06?1:Math.max(0,1-(Math.abs(dt)-.06)/.24); const b=this.ball;
     if(q<=0||b.pos.z>1.4){ this.result('SWING AND A MISS','',0); m.face('sad',2); return; }
@@ -976,6 +998,7 @@ SPORTS.baseball={
   result(txt,sub,dist,hr){ this.state='result'; this.stateT=0; const st=this.stats[this.turn]; st.n++; st.dist+=dist; st.best=Math.max(st.best,dist); if(hr){ st.hr++; AUD.cheer(); const p=this.cur(); if(!p.cpu)buzz(p,400); const mm=this.miis[this.turn]; mm.face('cheer',3); if(!mm.tracked)mm.play('cheer',1.2,(m,k)=>{ m.arm('R',-2.6-Math.sin(k*20)*.3,0,0); m.arm('L',-2.6+Math.sin(k*20)*.3,0,0); m.body.position.y=Math.abs(Math.sin(k*12))*.18; }); } banner(txt,sub,2,hr?'gold':''); this.hudScore(); hud('B',''); },
   hudScore(){ hud('TL',scoreboard(this.players.map((p,i)=>({name:p.name,color:p.color,v:this.stats[i].hr+' <small style="font-size:.55em;color:#6b7c93">HR</small>'})))); },
   update(dt){
+    if(this.hitStop>0){ this.hitStop-=dt; if(!this.cur().cpu&&tracked(this.cur()))this.trackBat(this.cur(),dt); return; }
     this.t+=dt; this.stateT+=dt; const b=this.ball, p=this.cur();
     if(this.state==='windup'&&this.stateT>1.25)this.pitch();
     if(this.state==='pitch'){ if(p.cpu&&!this.swung&&this.t>=this.cpuAt)this.swing(this.cpuAt,clamp(1+gauss()*.2,.6,1.4)); }
@@ -988,8 +1011,10 @@ SPORTS.baseball={
         if(b.landed){ b.vel.x*=(1-1.5*h); b.vel.z*=(1-1.5*h); } if(r>this.FENCE+60||(b.landed&&b.vel.length()<.3)){ b.active=false; break; } } }
     if(this.state==='result'&&this.stateT>2.4&&(!b.active||b.phase!=='hit'||this.stateT>4.5)){ this.next(); }
     this.ballM.position.copy(b.pos); this.ballM.visible=b.active; placeShadow(this.shadow,b.pos); this.shadow.visible=b.active;
+    if(b.active&&b.phase==='pitch'){ this.trail.forEach((t,i)=>{ if(i===0)t.position.copy(b.pos); else t.position.lerp(this.trail[i-1].position,.6); t.visible=true; }); } else this.trail.forEach(t=>t.visible=false);
+    this.zone.visible=this.state==='pitch'||this.state==='windup';
     if(b.active&&b.phase==='hit'){ const dir=V3(b.vel.x,0,b.vel.z).normalize(); camLerp(V3(b.pos.x-dir.x*16,b.pos.y*.5+6,b.pos.z-dir.z*16),b.pos.clone(),.12); }
-    else if(this.state!=='result'||!b.active){ camLerp(V3(0,2.6,7),V3(0,1.4,-14),.06); }
+    else if(this.state!=='result'||!b.active){ camLerp(V3(-2.6,2.5,3.8),V3(-.1,1.0,-4),.06); }
     this.miis.forEach(m=>m.update(dt)); this.pitcher.update(dt); this.catcher.update(dt);
   },
   next(){ this.turn++; if(this.turn>=this.players.length){ this.turn=0; this.round++; } if(this.round>=this.PITCHES){ this.finish(); return; } this.beginPitch(); },
@@ -1099,87 +1124,85 @@ SPORTS.golf={
   dispose(){ $('#golfcard').classList.add('hidden'); $('#minimap').classList.add('hidden'); }
 };
 const _gf1=new THREE.Vector3(), _gf2=new THREE.Vector3(), _gf3=new THREE.Vector3(), _gfY=new THREE.Vector3(0,1,0);
-/* ============================== BOXING ============================== */
-const BOX_CFG={rest:[.28,-.05,.4],posGain:1.4,punchSpeed:2.6,reach:.8,armLen:1.05,hookRatio:.75,upperRatio:.6,powerDiv:4.5,guardY:1.72,guardR:.55,guardSpeed:1.0};
-SPORTS.boxing={
-  name:'Boxing',icon:'🥊',players:'1-4 players',ROUNDS:3,ROUND_T:60,
-  how:['Your glove follows the phone: hold it in your fist. Punch straight for a jab, swing sideways for a hook, punch upward for an uppercut. A punch lands when your glove actually reaches the other boxer.','Raise the glove in front of your face (or hold BLOCK) to guard. Blocking stops most of the damage.','Harder punches hurt more. Knock your opponent\'s health to zero for a K.O.','3 rounds of 60 seconds. With 3 or 4 players, the winner stays in the ring.'],
-  who:n=>n<=1?'You vs the computer':n===2?'Player 1 vs Player 2':'Winner stays on: P1 vs P2, then the winner takes on the next player',
+/* ============================== SWORDPLAY (duel) ============================== */
+const SW_CFG={rest:[.3,-.1,.4],posGain:1.2,armLen:.95,bladeLen:1.0,slashSpeed:3.2,hitR:.72,knockGain:.28,knockMin:.45,knockMax:1.5,parryPush:.35,stagger:.28,hitCd:.4,platformR:3.3,approachDist:1.9,approachSpeed:.8,roundsToWin:2};
+SPORTS.sword={
+  name:'Swordplay',icon:'⚔️',players:'1-4 players',
+  how:['Your sword follows the phone. Hold it like a sword grip: point it forward, hold it sideways, raise it, whatever you do the sword does.','Slash through your opponent to knock them back. A faster slash knocks harder. Knock them off the edge of the platform to win the round.','Hold BLOCK to guard: a blocked slash barely moves you and pushes the attacker back instead.','First to 2 rounds wins. With 2 players the screen splits, one view behind each fighter. With 3 or 4 players the winner stays on.'],
+  who:n=>n<=1?'You vs the computer':n===2?'Player 1 vs Player 2, split screen':'Winner stays on: P1 vs P2, then the next challenger',
   build(players){
-    const s=newScene({sky:0x1b2233,fog:false,shadow:10,sunX:4,sunY:12,sunZ:6,hemi:.35,sun:.7,hemiSky:0x9fb3d8,hemiGround:0x1a2030});
+    const s=newScene({sky:0x8fd3ff,shadow:12,sunX:8,sunY:20,sunZ:10,fogNear:80,fogFar:400});
     this.players=players.length?players:[cpuPlayer('CPU','#8899aa')]; this.wins=this.players.map(()=>0); this.queue=this.players.slice(); this.t=0; this.stateT=0;
-    s.add(plane(60,60,0x161c2a,{cast:false}));
-    const ring=box(7,.6,7,0x3b4a66); ring.position.y=.3; s.add(ring); const mat_=plane(6.6,6.6,0xe8eef5,{}); mat_.position.y=.61; s.add(mat_);
-    for(const [x,z] of[[-3.3,-3.3],[3.3,-3.3],[-3.3,3.3],[3.3,3.3]]){ const p=cyl(.08,.08,1.6,0xdddddd); p.position.set(x,1.4,z); s.add(p); }
-    for(let i=0;i<3;i++){ const y=.95+i*.35; const col=[0xff5a5f,0xffffff,0x2f80ff][i]; for(const [x,z,rot] of[[0,-3.3,0],[0,3.3,0],[-3.3,0,Math.PI/2],[3.3,0,Math.PI/2]]){ const r=cyl(.025,.025,6.6,col,8); r.rotation.z=Math.PI/2; r.rotation.y=rot; r.position.set(x,y,z); s.add(r); } }
-    for(let i=0;i<6;i++){ const l=new THREE.PointLight(0xfff1d6,.2,30); l.position.set(-5+i*2,6,i%2?4:-4); s.add(l); }
-    if(!backdrop(s,'bg_arena',{r:15,h:11,len:TAU,center:Math.PI,rep:3,y:4.2})){ const spots=[]; for(let a=0;a<360;a+=15){ const r=a*Math.PI/180; for(let i=0;i<3;i++){ const rr=9+i*2.2; spots.push([Math.sin(r)*rr,.6+i*1.2,Math.cos(r)*rr,.8,.3,.8]); } } crowd(s,spots,240); for(let i=0;i<3;i++){ const st=mesh(new THREE.TorusGeometry(9.5+i*2.2,1.1,4,40),i%2?0x2a3550:0x223049,{cast:false}); st.rotation.x=Math.PI/2; st.position.y=i*1.2; s.add(st); } }
-    this.fx=[]; camSet(V3(0,2.6,6),V3(0,1.2,0));
-    this.startBout();
+    skyDome(s); const sea=tplane(600,600,'tex_water',0x3aa5e6,14); sea.position.y=-6; s.add(sea); backdrop(s,'bg_hills',{r:200,h:70,len:TAU,center:Math.PI,rep:4,y:20});
+    const base=cyl(SW_CFG.platformR+.3,SW_CFG.platformR+1.2,6,0x8a7a66,24); base.position.y=-3; s.add(base);
+    const top=cyl(SW_CFG.platformR,SW_CFG.platformR+.3,.4,0xe9dcc0,48); top.position.y=-.2; s.add(top);
+    const rim=mesh(new THREE.TorusGeometry(SW_CFG.platformR,.08,8,64),0xd63a48); rim.rotation.x=Math.PI/2; rim.position.y=.02; s.add(rim);
+    for(let i=0;i<8;i++){ const a=i/8*TAU; const post=cyl(.12,.14,1.2,0x5a3a1a); post.position.set(Math.cos(a)*7,-.6,Math.sin(a)*7); s.add(post); }
+    this.fx=[]; this.startBout();
   },
-  startBout(){ this.queue=this.queue||[]; const A=this.champ||this.queue.shift(); const B=this.queue.shift()||cpuPlayer('CPU','#8899aa'); this.boxers=[this.mkBoxer(A,-1),this.mkBoxer(B,1)]; this.round=0; this.state='intro'; this.stateT=0; this.hudHP(); banner('ROUND 1','get ready',1.8); this.phones(); AUD.fanfare(); },
-  mkBoxer(p,side){ if(this.boxers)this.boxers.forEach(b=>{ if(b.p===p){ R.scene.remove(b.mii.g); } }); const mii=makeMii(p.color,p.name); mii.baseExpr='determined'; mii.face('determined'); mii.g.position.set(side*.75,.62,0); mii.g.rotation.y=side>0?-Math.PI/2:Math.PI/2; R.scene.add(mii.g);
-    if(!p.cpu){ mii.setTrackedTool('glove'); const gl=sph(.15,0xd63a48,{phong:true}); gl.position.y=-.05; mii.arms.L.tool.add(gl); } else mii.setTool('gloves');
-    const b={p,cpu:!!p.cpu,mii,side,hp:100,punch:null,block:false,stun:0,cd:0,ko:false,cpuAt:0,blockT:0,lean:0,hitT:0,tr:new PointTracker(),rest:new THREE.Vector3(...BOX_CFG.rest),guardAuto:false}; mii.rest=m=>{ this.guardPose(b,m); }; return b; },
-  guardPose(b,m){ const bl=b.block?1:0; if(!m.tracked)m.arm('R',lerp(-1.6,-2.3,bl),lerp(-.3,-.1,bl),.5-.3*bl); m.arm('L',lerp(-1.6,-2.3,bl),lerp(.3,.1,bl),-.5+.3*bl); m.body.rotation.x=lerp(m.body.rotation.x,.1+.15*bl,.2); m.body.position.z=lerp(m.body.position.z,0,.2); },
-  phones(){ this.players.forEach(p=>{ const b=this.boxers.find(x=>x.p===p); if(b)phoneUI(p,{mode:'box',icon:'🥊',title:'FIGHT!',sub:'Your glove follows the phone. Punch forward, hook sideways, or uppercut. Raise it to your face or hold BLOCK to guard.',btns:[{id:'block',label:'HOLD TO BLOCK',hold:1},{id:'recenter',label:'RECENTER',sec:1}],rate:3}); else phoneUI(p,{mode:'wait',icon:'🥊',title:'Next up',sub:this.boxers[0].p.name+' vs '+this.boxers[1].p.name,btns:[],rate:3}); }); },
-  hudHP(){ const [A,B]=this.boxers; const bar=b=>`<div class="hp" style="--c:${b.p.color}"><div class="nm"><span>${esc(b.p.name)}</span><span>${Math.max(0,Math.ceil(b.hp))}</span></div><div class="bar"><i style="width:${clamp(b.hp,0,100)}%"></i></div></div>`; hud('TL',bar(A)); hud('TR',bar(B)); },
-  hudTime(){ hud('TC',`<b>ROUND ${this.round+1}</b> &nbsp; ${Math.ceil(this.timer)}s`); },
-  onBtn(p,id,down){ const b=this.boxers.find(x=>x.p===p); if(!b||id!=='block')return; b.block=down&&!b.ko; if(down&&b.punch)b.punch=null; },
-  // legacy gesture path for phones without tracking
-  onSwingStart(p){ const b=this.boxers.find(x=>x.p===p); if(b&&!tracked(p))this.punch(b,'jab',.9,true); },
-  onSwing(p,sw){ const b=this.boxers.find(x=>x.p===p); if(!b||tracked(p))return; const ax=Math.abs(sw.dx),ay=Math.abs(sw.dy),az=Math.abs(sw.dz); let type='jab'; if(sw.touch){ type=ay>ax?(sw.dy>0?'upper':'jab'):'hook'; } else { if(Math.abs(sw.rg)>260||(ax>ay&&ax>az))type='hook'; else if(az>ay&&sw.dz>0)type='upper'; }
-    if(b.punch&&b.punch.early&&b.punch.t<.13){ b.punch.pw=clamp(sw.pw,.4,1.6); b.punch.type=type; b.punch.early=false; return; } this.punch(b,type,sw.pw); },
-  punch(b,type,pw,early){ if(this.state!=='fight'||b.ko||b.punch||b.stun>0||b.cd>0)return; b.block=false; b.punch={type,t:0,dur:b.cpu?.5:.34,hitAt:b.cpu?.28:.16,pw:clamp(pw,.4,1.6),done:false,early:!!early,arm:b.nextArm=(b.nextArm==='L'?'R':'L')}; AUD.swish(); const m=b.mii, arm=b.punch.arm, self=this;
-    if(m.tracked)return;
-    m.play('punch',.34,(mii,k)=>{ self.guardPose(b,mii); const e=k<.45?easeOut(k/.45):1-easeIn((k-.45)/.55); if(type==='jab'){ mii.arm(arm,-1.55-e*.05,arm==='L'?.3*(1-e):-.3*(1-e),(arm==='L'?-1:1)*(.5-e*.45)); mii.body.position.z=-e*.25; }
-      else if(type==='hook'){ mii.arm(arm,-1.5,(arm==='L'?1:-1)*(1.4-e*2.6),(arm==='L'?-1:1)*.4); mii.body.rotation.y=(arm==='L'?1:-1)*(.5-e*1.0); }
-      else { mii.arm(arm,-.6-e*1.9,0,(arm==='L'?-1:1)*.3); mii.body.rotation.x=.3-e*.4; mii.body.position.z=-e*.15; } }); },
-  // ---- tracked glove: real punch = the glove moving fast toward the opponent and reaching them ----
-  trackGlove(b,o,dt){ const c=b.p.ctrl, K=BOX_CFG, m=b.mii; rigHand(m,c,b.rest,K.posGain,1,K.armLen); b.tr.update(m.toolG,_bx1.set(0,0,0),dt); m.arm('L',-1.6,.3,-.5);
-    const hv=ctrlVelWorld(m,c,_bx2).add(b.tr.vel); const sp=hv.length(); const g=b.tr.pos; const head=m.g.position;
-    // guard: glove held up in front of the face, or the block button
-    const guarding=b.p.btn.block||(g.y>K.guardY&&Math.hypot(g.x-head.x,g.z-head.z)<K.guardR&&sp<K.guardSpeed); if(!b.ko)b.block=guarding;
-    if(this.state!=='fight'||b.ko)return;
-    const fwd=_bx3.set(o.mii.g.position.x-head.x,0,o.mii.g.position.z-head.z).normalize(); const vf=hv.dot(fwd);
-    if(!b.punch&&b.stun<=0&&b.cd<=0&&sp>K.punchSpeed&&vf>sp*.35&&!guarding){ const lat=Math.hypot(hv.x-fwd.x*vf,hv.z-fwd.z*vf); let type='jab'; if(hv.y>K.upperRatio*sp)type='upper'; else if(lat>K.hookRatio*Math.max(vf,.01))type='hook'; b.punch={type,t:0,dur:.45,hitAt:99,pw:clamp(sp/K.powerDiv,.5,1.6),done:false,tracked:true,arm:'R'}; AUD.swish(); }
-    if(b.punch&&b.punch.tracked&&!b.punch.done){ const chest=_bx4.copy(o.mii.g.position).add(_bx1.set(0,1.45,0)); const d=g.distanceTo(chest); const vf2=hv.dot(fwd); if(d<K.reach&&vf2>0.4){ b.punch.done=true; b.punch.pw=clamp(Math.max(b.punch.pw,sp/K.powerDiv),.5,1.6); this.resolve(b); } else if(b.punch.t>=b.punch.dur){ b.punch=null; b.cd=.12; } } },
-  resolve(b){ const o=this.boxers.find(x=>x!==b); const pn=b.punch; const dmg={jab:5+5*pn.pw,hook:8+7*pn.pw,upper:10+9*pn.pw}[pn.type]; b.cd=.35;
-    if(o.dodge>0){ banner('DODGE','',.6); return; }
-    if(o.block){ o.hp-=dmg*.2; AUD.thud(); if(!o.mii.tracked)o.mii.play('blockhit',.25,(m,k)=>{ this.guardPose(o,m); m.body.position.z=Math.sin(k*Math.PI)*.12; }); this.spark(o,0x9fb3c8); if(!o.cpu)buzz(o.p,40); }
-    else { o.hp-=dmg; o.stun=.4; AUD.punch(); this.shake=.25; this.spark(o,0xffc233); if(!o.cpu)buzz(o.p,150); o.mii.face('surprised',.5); const up=pn.type==='upper'; o.punch=null; o.mii.play('hit',.45,(m,k)=>{ if(!m.tracked)this.guardPose(o,m); const e=Math.sin(k*Math.PI); m.headG.rotation.x=(up?-.7:-.45)*e; m.headG.rotation.y=(pn.type==='hook'?.6:0)*e; m.body.position.z=e*.3; m.body.rotation.x=-.25*e; });
-      if(o.hp<=0){ this.knockout(o,b); } }
-    banner(pn.type==='jab'?'JAB':pn.type==='hook'?'HOOK':'UPPERCUT',o.block?'blocked':'',.5); this.hudHP(); },
-  spark(o,color){ for(let i=0;i<8;i++){ const m=sph(.05,color,{cast:false,recv:false},6); m.position.set(o.mii.g.position.x-o.side*.3,1.9+rnd(-.2,.2),rnd(-.2,.2)); m.userData.v=V3(rnd(-2,2),rnd(1,4),rnd(-2,2)); m.userData.t=0; R.scene.add(m); this.fx.push(m); } },
-  knockout(o,b){ o.ko=true; o.block=false; this.state='ko'; this.stateT=0; o.mii.face('sad',9); b.mii.face('cheer',9); banner('K.O.!',b.p.name+' wins by knockout',3,'gold'); AUD.cheer(); AUD.crash(); if(!b.cpu)buzz(b.p,500); o.mii.play('ko',.9,(m,k)=>{ const e=easeIn(k); m.g.rotation.x=0; m.body.rotation.x=-e*1.5; m.body.position.z=e*.9; m.body.position.y=-e*.35; m.arm('L',-2.5*e,0,-.5); if(!m.tracked)m.arm('R',-2.5*e,0,.5); }); o.mii.rest=null; this.endBout(b,o); },
-  endBout(w,l){ this.pendingEnd=true; const wi=this.players.indexOf(w.p); if(wi>=0)this.wins[wi]++; this.champ=w.p; this.loser=l.p; },
+  startBout(){ const A=this.champ||this.queue.shift(); const B=this.queue.shift()||cpuPlayer('CPU','#8899aa'); if(this.f)this.f.forEach(f=>R.scene.remove(f.mii.g));
+    this.f=[this.mkFighter(A,1),this.mkFighter(B,-1)]; this.round=0; this.rounds=[0,0]; this.state='intro'; this.stateT=0; this.cams(); this.hudRounds(); banner('ROUND 1','',1.8); this.phones(); AUD.fanfare(); },
+  mkFighter(p,side){ const mii=makeMii(p.color,p.name); mii.baseExpr='determined'; mii.face('determined'); mii.g.position.set(0,0,side*1.25); mii.g.rotation.y=side>0?Math.PI:0; R.scene.add(mii.g);
+    if(!p.cpu)mii.setTrackedTool('sword'); else mii.setTool('sword');
+    const f={p,cpu:!!p.cpu,mii,side,pos:new THREE.Vector3(0,0,side*1.25),guard:false,stagger:0,cd:0,tr:new PointTracker(),rest:new THREE.Vector3(...SW_CFG.rest),out:false,fallT:0,cpuAt:0,slash:null,vel:new THREE.Vector3()};
+    mii.rest=m=>{ if(!m.tracked){ m.arm('R',-1.1,-.4,.4); } m.arm('L',-.4,.2,-.3); }; return f; },
+  cams(){ const humans=this.f.filter(f=>!f.cpu); if(humans.length===2){ R.views=this.f.map(f=>({cam:new THREE.PerspectiveCamera(50,1,.1,1000),f,pos:new THREE.Vector3(),look:new THREE.Vector3()})); $('#vsplit').classList.add('on'); } else { R.views=null; $('#vsplit').classList.remove('on'); } },
+  phones(){ this.players.forEach(p=>{ const f=this.f.find(x=>x.p===p); if(f)phoneUI(p,{mode:'sword',icon:'⚔️',title:'FIGHT!',sub:'Your sword follows the phone. Slash through your opponent; hold BLOCK to guard.',btns:[{id:'block',label:'HOLD TO BLOCK',hold:1},{id:'recenter',label:'RECENTER',sec:1}],rate:3}); else phoneUI(p,{mode:'wait',icon:'⚔️',title:'Next up',sub:this.f[0].p.name+' vs '+this.f[1].p.name,btns:[],rate:3}); }); },
+  hudRounds(){ const [A,B]=this.f; const pip=(f,i)=>`<div class="turn"><span class="dot" style="--c:${f.p.color}"></span><b>${esc(f.p.name)}</b> <span style="font-family:Fredoka;font-size:1.3em">${'●'.repeat(this.rounds[i])}${'○'.repeat(SW_CFG.roundsToWin-this.rounds[i])}</span></div>`; hud('TL',pip(A,0)); hud('TR',pip(B,1)); },
+  onBtn(p,id,down){ const f=this.f.find(x=>x.p===p); if(!f||id!=='block')return; f.guard=down&&!f.out; },
+  // legacy swing events (touch mode): a canned slash
+  onSwing(p,sw){ const f=this.f.find(x=>x.p===p); if(!f||tracked(p))return; this.cannedSlash(f,clamp(sw.pw,.6,1.5)); },
+  cannedSlash(f,pw){ if(f.slash||f.stagger>0||f.cd>0||this.state!=='fight'||f.out)return; f.slash={t:0,dur:.4,hitAt:.18,pw,done:false,canned:true}; AUD.swish(); const m=f.mii; if(!m.tracked)m.play('slash',.4,(mii,k)=>{ const e=k<.4?easeOut(k/.4):1-easeIn((k-.4)/.6); mii.arm('R',-1.1-e*.6,-.4+e*1.8,.4); mii.body.rotation.y=-.5+e*1.1; }); },
+  trackSword(f,o,dt){ const K=SW_CFG, c=f.p.ctrl, m=f.mii; rigHand(m,c,f.rest,K.posGain,1,K.armLen); f.tr.update(m.toolG,_sw1.set(0,0,K.bladeLen),dt);
+    if(this.state!=='fight'||f.out||f.cd>0||f.stagger>0)return;
+    const hv=ctrlVelWorld(m,c,_sw2).add(f.tr.vel); const sp=hv.length(); if(sp<K.slashSpeed)return;
+    // blade segment (hand -> tip) against the opponent's body
+    const hand=_sw3.set(0,0,0); m.toolG.localToWorld(hand); const tip=f.tr.pos; const body=_sw4.copy(o.mii.g.position).add(_sw5.set(0,1.1,0)); const seg=_sw5.copy(tip).sub(hand); const L2=Math.max(1e-4,seg.lengthSq()); const tt=clamp(_sw6.copy(body).sub(hand).dot(seg)/L2,0,1); const near=_sw6.copy(hand).addScaledVector(seg,tt); const dy=Math.abs(near.y-body.y); const d=Math.hypot(near.x-body.x,near.z-body.z);
+    if(d<K.hitR&&dy<.9){ this.hit(f,o,sp,hv); } },
+  hit(f,o,sp,hv){ const K=SW_CFG; f.cd=K.hitCd; const dir=_sw3.copy(o.mii.g.position).sub(f.mii.g.position); dir.y=0; dir.normalize(); if(hv){ const h=_sw4.set(hv.x,0,hv.z); if(h.length()>.5){ h.normalize(); dir.lerp(h,.35).normalize(); } }
+    let k=clamp(sp*K.knockGain,K.knockMin,K.knockMax);
+    if(o.guard){ k*=.25; f.vel.addScaledVector(dir,-K.parryPush*3); banner('BLOCKED','',.5); AUD.crack(); this.spark(o,0x9fb3c8); o.mii.face('determined'); }
+    else { o.stagger=K.stagger; AUD.punch(); AUD.tone(1400,.08,'square',.12,-600); this.spark(o,0xffc233); o.mii.face('surprised',.5); this.shake=.2; if(!o.cpu)buzz(o.p,150); o.mii.play('hit',.35,(m,kk)=>{ const e=Math.sin(kk*Math.PI); m.headG.rotation.x=-.4*e; m.body.rotation.x=-.25*e; }); }
+    o.vel.addScaledVector(dir,k*3.2); if(!f.cpu)buzz(f.p,60); },
+  spark(o,color){ for(let i=0;i<8;i++){ const m=sph(.05,color,{cast:false,recv:false},6); m.position.copy(o.mii.g.position).add(V3(rnd(-.2,.2),1.3+rnd(-.2,.2),rnd(-.2,.2))); m.userData.v=V3(rnd(-2,2),rnd(1,4),rnd(-2,2)); m.userData.t=0; R.scene.add(m); this.fx.push(m); } },
   update(dt){
-    this.t+=dt; this.stateT+=dt; const [A,B]=this.boxers;
-    if(this.state==='intro'&&this.stateT>2){ this.state='fight'; this.stateT=0; this.timer=this.ROUND_T; banner('FIGHT!','',.9,'red'); AUD.ding(); }
-    if(this.state==='fight'){ this.timer-=dt; if(this.timer<=0){ this.round++; if(this.round>=this.ROUNDS){ const w=A.hp>=B.hp?A:B, l=w===A?B:A; this.state='ko'; this.stateT=0; banner('DECISION',w.p.name+' wins on points',3,'gold'); AUD.cheer(); this.endBout(w,l); } else { this.state='rest'; this.stateT=0; banner('ROUND '+(this.round+1),'',1.8); this.boxers.forEach(b=>{ b.hp=Math.min(100,b.hp+15); b.punch=null; b.block=false; }); this.hudHP(); } }
-      this.hudTime();
-      this.boxers.forEach(b=>{ const o=b===A?B:A; b.stun=Math.max(0,b.stun-dt); b.cd=Math.max(0,b.cd-dt); b.dodge=Math.max(0,(b.dodge||0)-dt);
-        if(b.punch&&!b.punch.tracked){ b.punch.t+=dt; if(!b.punch.done&&b.punch.t>=b.punch.hitAt){ b.punch.done=true; this.resolve(b); } if(b.punch.t>=b.punch.dur)b.punch=null; }
-        else if(b.punch&&b.punch.tracked){ b.punch.t+=dt; }
-        if(b.cpu){ if(o.punch&&!o.punch.done&&!b.block&&b.blockT<=0&&Math.random()<.02*60*dt*.6){ b.block=true; b.blockT=.5; } if(b.blockT>0){ b.blockT-=dt; if(b.blockT<=0)b.block=false; }
-          if(this.t>b.cpuAt&&!b.block&&!b.punch&&b.stun<=0){ b.cpuAt=this.t+rnd(1.4,2.7); this.punch(b,['jab','jab','hook','upper'][Math.floor(Math.random()*4)],clamp(.7+gauss()*.2,.45,1.1)); } }
+    this.t+=dt; this.stateT+=dt; const [A,B]=this.f, K=SW_CFG;
+    if(this.state==='intro'&&this.stateT>2){ this.state='fight'; this.stateT=0; banner('FIGHT!','',.9,'red'); AUD.ding(); }
+    if(this.state==='fight'){
+      this.f.forEach(f=>{ const o=f===A?B:A; f.cd=Math.max(0,f.cd-dt); f.stagger=Math.max(0,f.stagger-dt);
+        // canned slash resolution (CPU / touch mode)
+        if(f.slash&&f.slash.canned){ f.slash.t+=dt; if(!f.slash.done&&f.slash.t>=f.slash.hitAt){ f.slash.done=true; const dd=f.mii.g.position.distanceTo(o.mii.g.position); if(dd<2.1)this.hit(f,o,2.5+f.slash.pw*3,null); } if(f.slash.t>=f.slash.dur)f.slash=null; }
+        if(f.cpu){ if(o.tr&&o.tr.speed>3&&!f.guard&&Math.random()<.02*60*dt*.5){ f.guard=true; f.guardT=.6; } if(f.guardT>0){ f.guardT-=dt; if(f.guardT<=0)f.guard=false; }
+          if(this.t>f.cpuAt&&!f.guard&&!f.slash&&f.stagger<=0){ f.cpuAt=this.t+rnd(1.8,3.2); this.cannedSlash(f,clamp(.6+gauss()*.2,.4,1.0)); } }
+        // approach when far apart, then knockback velocity + friction
+        const toO=_sw1.copy(o.mii.g.position).sub(f.mii.g.position); toO.y=0; const dist=toO.length(); if(dist>K.approachDist&&f.stagger<=0){ f.vel.addScaledVector(toO.normalize(),K.approachSpeed*dt*4); }
+        f.mii.g.position.addScaledVector(f.vel,dt); f.vel.multiplyScalar(Math.max(0,1-6*dt)); f.mii.g.position.y=0;
+        const r=Math.hypot(f.mii.g.position.x,f.mii.g.position.z); if(r>K.platformR+.15&&!f.out){ this.fall(f,o); }
+        f.mii.lookAt(o.mii.g.position.x,o.mii.g.position.z);
       });
+      // keep them from overlapping
+      const d=A.mii.g.position.distanceTo(B.mii.g.position); if(d<1.0){ const push=_sw1.copy(A.mii.g.position).sub(B.mii.g.position).normalize().multiplyScalar((1.0-d)/2); A.mii.g.position.add(push); B.mii.g.position.sub(push); }
     }
-    this.boxers.forEach(b=>{ const o=b===A?B:A; if(!b.cpu&&tracked(b.p)&&!b.ko){ if(!b.mii.tracked)b.mii.setTrackedTool('glove'); this.trackGlove(b,o,dt); } });
-    if(this.state==='rest'&&this.stateT>2.2){ this.state='fight'; this.stateT=0; this.timer=this.ROUND_T; banner('FIGHT!','',.9,'red'); }
-    if(this.state==='ko'&&this.stateT>3.4&&this.pendingEnd){ this.pendingEnd=false; this.nextBout(); return; }
-    this.boxers.forEach(b=>{ b.mii.update(dt); if(!b.ko&&!b.mii.anim){ b.mii.headG.rotation.x*=.9; b.mii.headG.rotation.y*=.9; b.mii.body.rotation.y*=.85; } });
+    this.f.forEach(f=>{ const o=f===A?B:A; if(!f.cpu&&tracked(f.p)&&!f.out){ if(!f.mii.tracked)f.mii.setTrackedTool('sword'); this.trackSword(f,o,dt); } if(f.out){ f.fallT+=dt; f.mii.g.position.y=-f.fallT*f.fallT*4; f.mii.g.rotation.x=-f.fallT*1.5; } f.mii.update(dt); if(f.guard&&!f.mii.anim){ f.mii.arm('L',-1.6,.4,-.6); } });
+    if(this.state==='roundEnd'&&this.stateT>2.6){ if(this.rounds[0]>=K.roundsToWin||this.rounds[1]>=K.roundsToWin){ const wi=this.rounds[0]>=K.roundsToWin?0:1; this.endBout(this.f[wi],this.f[1-wi]); } else this.resetRound(); }
+    if(this.state==='over'&&this.stateT>2.5){ this.nextBout(); return; }
     this.fx=this.fx.filter(m=>{ m.userData.t+=dt; m.userData.v.y-=9.8*dt; m.position.addScaledVector(m.userData.v,dt); if(m.userData.t>.6){ R.scene.remove(m); return false; } return true; });
-    this.shake=Math.max(0,(this.shake||0)-dt); const sh=this.shake*.25; camLerp(V3(rnd(-sh,sh),2.6+rnd(-sh,sh),6),V3(0,1.25,0),.2);
+    this.shake=Math.max(0,(this.shake||0)-dt); this.camera(dt);
   },
-  nextBout(){ if(this.queue.length){ this.boxers.forEach(b=>R.scene.remove(b.mii.g)); this.startBout(); } else this.finish(); },
-  finish(){ const rows=this.players.map((p,i)=>({p:p.cpu?null:p,name:p.name,color:p.color,val:this.wins[i]+(this.champ===p?.5:0),w:this.wins[i]})).sort((a,b)=>b.val-a.val).map(r=>Object.assign(r,{score:r.p===this.champ?'CHAMPION':(r.w+' win'+(r.w===1?'':'s'))})); if(this.players.length===1&&this.champ&&this.champ.cpu)rows[0].score='LOST TO CPU'; endSport(rows,'Boxing'); },
-  onKey(k){ if(TEST){ const b=this.boxers[0]; if(k==='j')this.punch(b,'jab',1); if(k==='h')this.punch(b,'hook',1); if(k==='u')this.punch(b,'upper',1); if(k==='b')b.block=!b.block; } },
-  dispose(){}
+  camera(dt){ const sh=(this.shake||0)*.2; const camFor=(f,o,out)=>{ const back=_sw1.copy(f.mii.g.position).sub(o.mii.g.position); back.y=0; if(back.length()<.1)back.set(0,0,f.side); back.normalize(); const rx=back.z, rz=-back.x; out.pos.set(f.mii.g.position.x+back.x*4.0+rx*1.4+rnd(-sh,sh),2.8+rnd(-sh,sh),f.mii.g.position.z+back.z*4.0+rz*1.4); out.look.set(o.mii.g.position.x*.7+f.mii.g.position.x*.3,1.0,o.mii.g.position.z*.7+f.mii.g.position.z*.3); };
+    if(R.views){ R.views.forEach(v=>{ camFor(v.f,v.f===this.f[0]?this.f[1]:this.f[0],v); v.cam.position.lerp(v.pos,.1); v.cam.lookAt(v.look); }); }
+    else { const f=this.f.find(x=>!x.cpu)||this.f[0]; const o=f===this.f[0]?this.f[1]:this.f[0]; const tmp={pos:_sw2,look:_sw3}; camFor(f,o,tmp); camLerp(tmp.pos,tmp.look,.1); } },
+  fall(f,o){ f.out=true; f.fallT=0; f.guard=false; this.state='roundEnd'; this.stateT=0; const wi=this.f.indexOf(o); this.rounds[wi]++; this.hudRounds(); banner('OFF THE EDGE!',o.p.name+' takes the round',2.2,'gold'); AUD.cheer(); AUD.noise(.5,.3,300,3000); o.mii.face('cheer',2.5); f.mii.face('sad',3); if(!o.cpu)buzz(o.p,300); },
+  resetRound(){ this.round++; this.f.forEach(f=>{ f.out=false; f.fallT=0; f.mii.g.position.set(0,0,f.side*1.25); f.mii.g.rotation.x=0; f.vel.set(0,0,0); f.stagger=0; f.cd=0; f.slash=null; f.guard=false; }); this.state='intro'; this.stateT=.8; banner('ROUND '+(this.round+1),'',1.6); },
+  endBout(w,l){ this.state='over'; this.stateT=0; const wi=this.players.indexOf(w.p); if(wi>=0)this.wins[wi]++; this.champ=w.p; banner('VICTORY',w.p.name+' wins the duel',2.4,'gold'); AUD.fanfare(); w.mii.face('cheer',5); },
+  nextBout(){ if(this.queue.length){ this.startBout(); } else this.finish(); },
+  finish(){ const rows=this.players.map((p,i)=>({p:p.cpu?null:p,name:p.name,color:p.color,val:this.wins[i]+(this.champ===p?.5:0),w:this.wins[i]})).sort((a,b)=>b.val-a.val).map(r=>Object.assign(r,{score:r.p===this.champ?'CHAMPION':(r.w+' win'+(r.w===1?'':'s'))})); if(this.players.length===1&&this.champ&&this.champ.cpu)rows[0].score='LOST TO CPU'; endSport(rows,'Swordplay'); },
+  onKey(k){ if(TEST){ const f=this.f[0]; if(k==='j')this.cannedSlash(f,1); if(k==='b')f.guard=!f.guard; } },
+  dispose(){ R.views=null; $('#vsplit').classList.remove('on'); }
 };
-const _bx1=new THREE.Vector3(), _bx2=new THREE.Vector3(), _bx3=new THREE.Vector3(), _bx4=new THREE.Vector3();
+const _sw1=new THREE.Vector3(), _sw2=new THREE.Vector3(), _sw3=new THREE.Vector3(), _sw4=new THREE.Vector3(), _sw5=new THREE.Vector3(), _sw6=new THREE.Vector3();
 /* ============================== BASKETBALL (shootaround) + 3-POINT CONTEST ============================== */
-const BB_CFG={releaseSpeed:2.2,speedGain:2.1,minSpeed:5,maxSpeed:11.5,aimAssist:.45,speedAssist:.5,ballR:.12,rimR:.225,rimH:3.05,boardZ:-.38,minElev:28,maxElev:68,armDrop:.85};
+const BB_CFG={setPitch:32,setTime:.12,snapRate:-3.5,releasePitchMax:55,speedBase:3.0,snapGain:.5,handGain:.8,minSpeed:5,maxSpeed:11.5,aimAssist:.65,speedAssist:.85,snapWindow:.08,ballR:.12,rimR:.225,rimH:3.05,boardZ:-.38,minElev:36,maxElev:60};
 const BB_SPOTS=[[0,4.6,2],[-3.2,3.6,2],[3.2,3.6,2],[-4.6,1.6,2],[4.6,1.6,2],[0,6.9,3],[-4.9,4.9,3],[4.9,4.9,3]]; // x, z (distance from the hoop toward the shooter), points
 const BB_RACKS=[[-6.4,1.6],[-4.8,4.9],[0,6.95],[4.8,4.9],[6.4,1.6]];
 const BBASE={
@@ -1207,12 +1230,12 @@ const BBASE={
   },
   cur(){ return this.players[this.pi]; },
   spot(){ if(this.threept){ const rack=Math.min(4,Math.floor(this.shotN[this.pi]/5)); const r=BB_RACKS[rack]; return {x:r[0],z:r[1],pts:this.shotN[this.pi]%5===4?2:1,rack}; } const sp=BB_SPOTS[(this.shotN[this.pi]+this.pi*3)%BB_SPOTS.length]; return {x:sp[0],z:sp[1],pts:sp[2]}; },
-  beginTurn(){ const p=this.cur(); this.state='hold'; this.stateT=0; this.armed=false; this.peak=0; this.vPeak=new THREE.Vector3(); this.sp=this.spot(); const m=this.miis[this.pi]; this.miis.forEach((mm,i)=>mm.g.visible=i===this.pi);
+  beginTurn(){ const p=this.cur(); this.state='hold'; this.stateT=0; this.armed=false; this.setT=0; this.snapT=0; this.peak=0; this.vPeak=new THREE.Vector3(); this.sp=this.spot(); const m=this.miis[this.pi]; this.miis.forEach((mm,i)=>mm.g.visible=i===this.pi);
     m.g.position.set(this.sp.x,0,this.sp.z); m.g.rotation.y=Math.atan2(0-this.sp.x,0-this.sp.z); m.anim=null; if(p.cpu){ m.rest=mii=>{ mii.arm('R',-1.4,0,.3); mii.arm('L',-1.4,0,-.3); }; this.cpuAt=this.t+1.4+Math.random(); }
     const b=this.ball; b.state='held'; b.bounces=0; b.scored=false; b.rimTouch=false; b.vel.set(0,0,0);
     if(this.threept&&this.timer<=0)this.timer=60;
     hud('B',turnBox(p,this.threept?`Rack ${this.sp.rack+1} · ball ${this.shotN[this.pi]%5+1} of 5${this.sp.pts===2?' · MONEY BALL':''}`:`Shot ${this.shotN[this.pi]+1} of ${this.shotsPer} · ${this.sp.pts} points`)); this.phones(); },
-  phones(){ this.players.forEach((p,i)=>{ if(p.cpu)return; if(i===this.pi)phoneUI(p,{mode:'bb',icon:'🏀',title:'Shoot!',sub:'Hold the phone like the ball. Push it up and toward the hoop; the ball leaves at the top of your flick. Or hold GRIP and let go to release.',btns:[{id:'grip',label:'HOLD GRIP · RELEASE TO SHOOT',hold:1},{id:'recenter',label:'RECENTER',sec:1}],rate:3}); else phoneUI(p,{mode:'wait',icon:'🏀',title:'Waiting',sub:this.cur().name+' is shooting.',btns:[],rate:3}); }); },
+  phones(){ this.players.forEach((p,i)=>{ if(p.cpu)return; if(i===this.pi)phoneUI(p,{mode:'bb',icon:'🏀',title:'Shoot!',sub:'Hold the phone up like the ball at your set point (top of the phone pointing up). Then push up and snap your wrist forward like a real shot; the ball leaves on the snap.',btns:[{id:'recenter',label:'RECENTER',sec:1}],rate:3}); else phoneUI(p,{mode:'wait',icon:'🏀',title:'Waiting',sub:this.cur().name+' is shooting.',btns:[],rate:3}); }); },
   hudScore(){ hud('TL',scoreboard(this.players.map((p,i)=>({name:p.name,color:p.color,v:this.scores[i]+' <small style="font-size:.55em;color:#6b7c93">pts</small>'})))); if(this.threept)hud('TC',`<b>${Math.ceil(Math.max(0,this.timer))}s</b>`); },
   onBtn(p,id,down,m){ if(this.cur()!==p||this.state!=='hold')return; if(id==='grip'&&!down&&this.tr.n>2){ this.release(this.tr.vel.clone().add(p.ctrl?ctrlVelWorld(this.miis[this.pi],p.ctrl):_bbv2.set(0,0,0)),true); } },
   onSwing(p,sw){ if(this.cur()!==p||this.state!=='hold'||tracked(p))return; const el=(40+clamp(sw.dy,-1,1)*15)*Math.PI/180; const spd=clamp(4+sw.pw*4.5,BB_CFG.minSpeed,BB_CFG.maxSpeed); const m=this.miis[this.pi]; const dir=V3(-this.sp.x,0,-this.sp.z).normalize(); this.launch(V3(dir.x*Math.cos(el)*spd,Math.sin(el)*spd,dir.z*Math.cos(el)*spd),m.g.position.clone().add(V3(0,1.9,0))); },
@@ -1221,9 +1244,12 @@ const BBASE={
     if(this.threept&&this.state!=='over'){ this.timer-=dt; if(this.timer<=0&&this.state==='hold'){ this.timer=0; this.finishTurn(true); } }
     if(this.state==='hold'){
       if(!p.cpu&&tracked(p)){ rigHand(m,p.ctrl,_bbRest,null,.7); this.tr.update(m.toolG,_bbv.set(0,0,.14),dt); b.pos.copy(this.tr.pos);
-        // release at the peak of the flick: speed rises past the threshold, then starts to fall
-        const hv=ctrlVelWorld(m,p.ctrl,_bbv2).add(this.tr.vel); const sp=hv.length(); if(sp>K.releaseSpeed){ this.armed=true; if(sp>this.peak){ this.peak=sp; this.vPeak.copy(hv); } }
-        if(this.armed&&!p.btn.grip&&sp<this.peak*K.armDrop&&this.stateT>.4){ this.release(this.vPeak,false); } }
+        // shooting motion: SET (phone pointing up for a moment) then the wrist SNAPS forward -> release with the snap
+        const c=p.ctrl; const pitchDeg=c.pitch*180/Math.PI; const hv=ctrlVelWorld(m,c,_bbv2).add(this.tr.vel);
+        if(pitchDeg>K.setPitch){ this.setT+=dt; if(this.setT>K.setTime)this.armed=true; } else if(!this.armed)this.setT=0;
+        const snap=-c.w.x; // rad/s of forward wrist snap (pitching the top of the phone down toward the hoop)
+        if(this.armed&&this.stateT>.3&&pitchDeg<K.releasePitchMax){ if(!this.snapT&&snap>-K.snapRate){ this.snapT=this.stateT; this.snapPeak=snap; this.hvPeak=hv.clone(); this.pitchAt=pitchDeg; }
+          if(this.snapT){ if(snap>this.snapPeak){ this.snapPeak=snap; this.hvPeak.copy(hv); this.pitchAt=pitchDeg; } if(this.stateT-this.snapT>K.snapWindow||snap<this.snapPeak*.75){ const st=this.snapT; this.snapT=0; this.releaseSnap(this.snapPeak,this.hvPeak,this.pitchAt); } } } }
       else if(!p.cpu){ m.update(dt); b.pos.copy(m.g.position).add(_bbv.set(0,1.75,0).applyQuaternion(m.g.quaternion)); }
       else { m.update(dt); b.pos.copy(m.g.position).add(_bbv.set(.3,1.7,.4).applyQuaternion(m.g.quaternion)); if(this.t>this.cpuAt){ const d=Math.hypot(this.sp.x,this.sp.z); const el=(48+gauss()*3)*Math.PI/180; const ideal=this.idealSpeed(d,el,1.9); const spd=ideal*(1+gauss()*.045); const dir=V3(-this.sp.x,0,-this.sp.z).normalize().applyAxisAngle(V3(0,1,0),gauss()*.03); this.launch(V3(dir.x*Math.cos(el)*spd,Math.sin(el)*spd,dir.z*Math.cos(el)*spd),b.pos.clone()); } }
     }
@@ -1236,6 +1262,11 @@ const BBASE={
     if(this.threept)this.hudScore();
   },
   idealSpeed(d,el,y0){ const dy=BB_CFG.rimH-y0; const c=Math.cos(el), s=Math.sin(el); const den=2*c*c*(d*Math.tan(el)-dy); return den>0?Math.sqrt(9.8*d*d/den):8; },
+  releaseSnap(snap,hv,pitchDeg){ const K=BB_CFG, p=this.cur(), c=p.ctrl; const from=this.ball.pos.clone();
+    const ax=c.axis().clone(); const toHoop=V3(-from.x,0,-from.z).normalize(); let h=V3(ax.x,0,ax.z); if(h.length()<.05)h.copy(toHoop); h.normalize(); h.lerp(toHoop,K.aimAssist).normalize();
+    let el=clamp((pitchDeg+10)*Math.PI/180,K.minElev*Math.PI/180,K.maxElev*Math.PI/180);
+    const d=Math.hypot(from.x,from.z); const ideal=this.idealSpeed(d,el,from.y); let spd=clamp(K.speedBase+snap*K.snapGain+hv.length()*K.handGain,K.minSpeed,K.maxSpeed); spd=lerp(spd,ideal,K.speedAssist);
+    this.launch(V3(h.x*Math.cos(el)*spd,Math.sin(el)*spd,h.z*Math.cos(el)*spd),from); buzz(p,70); },
   release(vel,manual){ const K=BB_CFG, p=this.cur(); const c=p.ctrl; const from=this.ball.pos.clone();
     // direction: the phone's pointing direction blended with the hand path, then partly assisted toward the hoop
     const hv=vel.clone(); const hvN=hv.clone().normalize(); const ax=c?c.axis().clone():hvN.clone(); if(ax.y<-.2||!c)ax.copy(hvN);
@@ -1269,12 +1300,85 @@ const BBASE={
   dispose(){}
 };
 const _bbv=new THREE.Vector3(), _bbv2=new THREE.Vector3(), _bbRest=new THREE.Vector3(.3,.05,.45);
-SPORTS.basketball=Object.assign({},BBASE,{name:'Basketball',icon:'🏀',mode:'shoot',
-  how:['Hold your phone like the ball, screen toward you, and flick it up toward the hoop. The ball leaves your hand at the top of the flick, in the direction the phone points, with your hand speed.','You can also hold GRIP on the phone while you wind up and let go to release.','8 shots each from spots around the key: 2 points inside the arc, 3 outside.','Highest score wins.'],
-  who:n=>n<=1?'8 shots, beat your best':n+' players alternate shots'});
-SPORTS.threept=Object.assign({},BBASE,{name:'3-Point Contest',icon:'🎯',mode:'3pt',
-  how:['Five racks of five balls along the three-point line, 60 seconds per player.','Flick the phone up toward the hoop to shoot (or hold GRIP and let go). Direction from where the phone points, power from the flick.','Every make is 1 point, the last ball of each rack is a MONEY BALL worth 2.','Most points wins.'],
+SPORTS.threept=Object.assign({},BBASE,{name:'3-Point Contest',icon:'🏀',mode:'3pt',
+  how:['Five racks of five balls along the three-point line, 60 seconds per player.','Shoot like a real jump shot: bring the phone up to your set point (top of the phone pointing up), then push up and snap your wrist forward. The ball leaves on the snap, toward where the phone points, harder for a faster snap.','Every make is 1 point, the last ball of each rack is a MONEY BALL worth 2.','Most points wins.'],
   who:n=>n<=1?'25 balls in 60 seconds':n+' players take turns, 60 s each'});
+/* ============================== TANKS (co-op, Wii Play style) ============================== */
+const TK_CFG={arenaW:18,arenaH:12,speed:3.2,turn:6,shellSpeed:9,shellMax:3,enemyShellSpeed:7,aimYawDeg:24,aimPitchDeg:16,lives:3,respawn:2.2,mineless:true};
+const TK_LEVELS=[{n:2,speed:1.2,fire:[2.5,4.5]},{n:3,speed:1.6,fire:[2.2,4]},{n:4,speed:1.8,fire:[2,3.6]},{n:5,speed:2.2,fire:[1.8,3.2]},{n:6,speed:2.4,fire:[1.6,3]}];
+const TK_WALLS=[[-3,-2,2,.7],[3,1.5,2,.7],[0,0,.7,2.4],[-6.5,1.5,.7,1.8],[6.5,-1.5,.7,1.8],[-4.5,-4.6,1.8,.6],[4.5,3.6,1.6,.6]]; // x, z, half w, half d
+SPORTS.tanks={
+  name:'Tanks',icon:'🚜',players:'1-4 players co-op',
+  how:['Drive your tank with the joystick on your phone. Point the phone at the TV to move your crosshair, your turret follows it.','Tap FIRE to shoot. Shells bounce off walls once, so bank shots work (and so do the enemy\'s).','Destroy every enemy tank to clear the mission. Five missions, each with more and faster enemies.','Everybody shares the fight: 3 lives each. Lose them all and the mission is over.'],
+  who:n=>n<=1?'Solo: 5 missions, 3 lives':n+' players co-op, 3 lives each',
+  build(players){
+    const s=newScene({sky:0x2b3448,fog:false,shadow:18,sunX:6,sunY:24,sunZ:8,hemi:.6,sun:.8,hemiSky:0xc8d8f0,hemiGround:0x3a3a30});
+    this.players=players.length?players:[cpuPlayer('CPU','#8899aa')]; this.t=0; this.stateT=0; this.level=0; this.lives=this.players.map(()=>TK_CFG.lives); this.kills=this.players.map(()=>0);
+    const W=TK_CFG.arenaW,H=TK_CFG.arenaH; const floor=tplane(W,H,'tex_dirt',0xc9b48a,3); floor.position.y=0; s.add(floor);
+    const outer=plane(80,80,0x1e2536,{cast:false}); outer.position.y=-.02; s.add(outer);
+    this.walls=[]; const addWall=(x,z,hw,hd,h=1)=>{ const b=box(hw*2,h,hd*2,0x7a6a55); b.position.set(x,h/2,z); s.add(b); this.walls.push({x,z,hw,hd}); };
+    addWall(0,-H/2-.4,W/2+.8,.4); addWall(0,H/2+.4,W/2+.8,.4); addWall(-W/2-.4,0,.4,H/2); addWall(W/2+.4,0,.4,H/2);
+    TK_WALLS.forEach(([x,z,hw,hd])=>addWall(x,z,hw,hd,.9));
+    this.tanks=[]; this.shells=[]; this.fx=[];
+    this.pt=this.players.map((p,i)=>{ const t=this.mkTank(p.color,false); t.p=p; t.spawn=V3(-2.4+i*1.6,0,H/2-1.3); t.pos.copy(t.spawn); t.cross=mesh(new THREE.TorusGeometry(.35,.05,8,24),p.color,{cast:false}); t.cross.rotation.x=Math.PI/2; t.cross.position.y=.06; s.add(t.cross); const dot=disc(.08,p.color,{}); dot.position.y=.01; t.cross.add(dot); t.aim=V3(0,0,-3); t.shells=0; t.dead=false; t.deadT=0; t.lastFire=0; return t; });
+    this.enemies=[]; camSet(V3(0,17,9.5),V3(0,0,-.5)); this.startLevel(); this.hudScore();
+  },
+  mkTank(color,enemy){ const g=new THREE.Group(); const body=box(.9,.45,1.2,color); body.position.y=.35; g.add(body); for(const sx of[-1,1]){ const tr=box(.22,.36,1.3,0x333333); tr.position.set(sx*.5,.25,0); g.add(tr); } const tur=new THREE.Group(); tur.position.y=.68; g.add(tur); const dome=sph(.3,color,{},14); dome.scale.y=.6; tur.add(dome); const bar=cyl(.06,.06,.9,0x333333,10); bar.rotation.x=Math.PI/2; bar.position.z=.55; tur.add(bar); R.scene.add(g); return {g,tur,pos:g.position,yaw:0,tyaw:0,enemy,alive:true,color}; },
+  startLevel(){ const L=TK_LEVELS[this.level]; this.enemies.forEach(e=>R.scene.remove(e.g)); this.enemies=[]; this.shells.forEach(sh=>R.scene.remove(sh.m)); this.shells=[];
+    for(let i=0;i<L.n;i++){ const e=this.mkTank(i%2?0x6b5a3a:0x9a8a6a,true); e.pos.set(-TK_CFG.arenaW/2+3+i*(TK_CFG.arenaW-6)/Math.max(1,L.n-1),0,-TK_CFG.arenaH/2+2); e.yaw=Math.PI; e.speed=L.speed; e.fire=L.fire; e.nextFire=this.t+rnd(2,4); e.wp=this.randomPoint(); e.hp=1; this.enemies.push(e); }
+    this.pt.forEach(t=>{ t.pos.copy(t.spawn); t.dead=false; t.g.visible=true; t.yaw=0; }); this.state='intro'; this.stateT=0; banner('MISSION '+(this.level+1),L.n+' enemy tank'+(L.n>1?'s':''),2,''); this.phones(); },
+  randomPoint(){ for(let k=0;k<20;k++){ const x=rnd(-TK_CFG.arenaW/2+1,TK_CFG.arenaW/2-1), z=rnd(-TK_CFG.arenaH/2+1,TK_CFG.arenaH/2-1); if(!this.hitWall(x,z,.6))return V3(x,0,z); } return V3(0,0,0); },
+  hitWall(x,z,r){ return this.walls.some(w=>Math.abs(x-w.x)<w.hw+r&&Math.abs(z-w.z)<w.hd+r); },
+  phones(){ this.players.forEach(p=>{ if(p.cpu)return; phoneUI(p,{mode:'tank',icon:'🚜',title:'Tanks',sub:'Joystick drives. Point the phone at the TV to aim, FIRE to shoot.',joy:1,btns:[{id:'fire',label:'FIRE',on:1}],rate:20}); }); },
+  hudScore(){ hud('TL',scoreboard(this.players.map((p,i)=>({name:p.name,color:p.color,v:'❤'.repeat(Math.max(0,this.lives[i]))+' <small style="font-size:.6em;color:#6b7c93">'+this.kills[i]+' kills</small>'})))); hud('TC',`<b>MISSION ${this.level+1}</b> · ${this.enemies.filter(e=>e.alive).length} left`); },
+  onBtn(p,id,down){ if(id!=='fire'||!down)return; const t=this.pt.find(x=>x.p===p); if(t)this.fire(t); },
+  onSwing(p,sw){ const t=this.pt.find(x=>x.p===p); if(t&&!tracked(p))this.fire(t); },
+  fire(t){ if(this.state!=='fight'||t.dead||t.shells>=TK_CFG.shellMax||this.t-t.lastFire<.25)return; t.lastFire=this.t; t.shells++; const dir=V3(Math.sin(t.tyaw),0,Math.cos(t.tyaw)); this.shell(t.pos.clone().add(V3(dir.x*.9,.68,dir.z*.9)),dir.multiplyScalar(TK_CFG.shellSpeed),t,false); AUD.pop(); buzz(t.p,40); },
+  shell(pos,vel,owner,enemy){ const m=sph(.12,enemy?0xffc233:0xffffff,{phong:true},8); m.position.copy(pos); R.scene.add(m); this.shells.push({m,pos:m.position,vel,owner,enemy,bounces:0,t:0}); },
+  update(dt){
+    this.t+=dt; this.stateT+=dt; const K=TK_CFG;
+    if(this.state==='intro'&&this.stateT>2.2){ this.state='fight'; this.stateT=0; }
+    // players
+    this.pt.forEach((t,i)=>{ const p=t.p;
+      if(t.dead){ t.deadT+=dt; if(t.deadT>K.respawn&&this.lives[i]>0){ t.dead=false; t.g.visible=true; t.pos.copy(t.spawn); } return; }
+      let jx=0,jy=0; if(p.cpu){ jx=Math.sin(this.t*.7); jy=Math.cos(this.t*.5); } else if(p.joy){ jx=p.joy.x; jy=p.joy.y; }
+      const mag=Math.hypot(jx,jy); if(mag>.15&&this.state==='fight'){ const want=Math.atan2(jx,-jy); let d=want-t.yaw; d=Math.atan2(Math.sin(d),Math.cos(d)); t.yaw+=clamp(d,-K.turn*dt,K.turn*dt); const sp=K.speed*Math.min(1,mag); const nx=t.pos.x+Math.sin(t.yaw)*sp*dt, nz=t.pos.z+Math.cos(t.yaw)*sp*dt; if(!this.hitWall(nx,t.pos.z,.55))t.pos.x=nx; if(!this.hitWall(t.pos.x,nz,.55))t.pos.z=nz; }
+      // crosshair from the phone pointing (like a pointer on the screen), else in front of the tank
+      if(!p.cpu&&tracked(p)){ const c=p.ctrl; const sx=clamp(-c.yaw*180/Math.PI/K.aimYawDeg,-1,1), sy=clamp(c.pitch*180/Math.PI/K.aimPitchDeg,-1,1); const tf=Math.tan(R.cam.fov*Math.PI/360); const dir=_tk1.set(sx*tf*R.cam.aspect,sy*tf,-1).applyQuaternion(R.cam.quaternion).normalize(); const k=-R.cam.position.y/dir.y; if(k>0&&isFinite(k)){ t.aim.copy(R.cam.position).addScaledVector(dir,k); t.aim.x=clamp(t.aim.x,-K.arenaW/2,K.arenaW/2); t.aim.z=clamp(t.aim.z,-K.arenaH/2,K.arenaH/2); } }
+      else { t.aim.set(t.pos.x+Math.sin(t.yaw)*4,0,t.pos.z+Math.cos(t.yaw)*4); if(p.cpu&&this.enemies.length){ const e=this.enemies.find(e=>e.alive); if(e)t.aim.copy(e.pos); if(this.t>t.lastFire+2)this.fire(t); } }
+      t.tyaw=Math.atan2(t.aim.x-t.pos.x,t.aim.z-t.pos.z); t.g.rotation.y=t.yaw; t.tur.rotation.y=t.tyaw-t.yaw; t.cross.position.set(t.aim.x,.06,t.aim.z); t.cross.visible=!t.dead;
+    });
+    // enemies
+    if(this.state==='fight')this.enemies.forEach(e=>{ if(!e.alive)return; const to=_tk1.copy(e.wp).sub(e.pos); if(to.length()<.6||e.stuck>1){ e.wp=this.randomPoint(); e.stuck=0; } const want=Math.atan2(to.x,to.z); let d=want-e.yaw; d=Math.atan2(Math.sin(d),Math.cos(d)); e.yaw+=clamp(d,-3*dt,3*dt); const nx=e.pos.x+Math.sin(e.yaw)*e.speed*dt, nz=e.pos.z+Math.cos(e.yaw)*e.speed*dt; let moved=false; if(!this.hitWall(nx,e.pos.z,.55)){ e.pos.x=nx; moved=true; } if(!this.hitWall(e.pos.x,nz,.55)){ e.pos.z=nz; moved=true; } e.stuck=(e.stuck||0)+(moved?0:dt); e.g.rotation.y=e.yaw;
+      const target=this.pt.filter(t=>!t.dead).sort((a,b)=>a.pos.distanceTo(e.pos)-b.pos.distanceTo(e.pos))[0]; if(target){ const ty=Math.atan2(target.pos.x-e.pos.x,target.pos.z-e.pos.z); e.tyaw=lerp(e.tyaw||ty,ty,.1); e.tur.rotation.y=e.tyaw-e.yaw; if(this.t>e.nextFire&&this.los(e.pos,target.pos)){ e.nextFire=this.t+rnd(e.fire[0],e.fire[1]); const a=e.tyaw+gauss()*.06; const dir=V3(Math.sin(a),0,Math.cos(a)); this.shell(e.pos.clone().add(V3(dir.x*.9,.68,dir.z*.9)),dir.multiplyScalar(K.enemyShellSpeed),e,true); AUD.pop(); } } });
+    // shells
+    this.shells=this.shells.filter(sh=>{ sh.t+=dt; const nx=sh.pos.x+sh.vel.x*dt, nz=sh.pos.z+sh.vel.z*dt;
+      let bounced=false; if(this.hitWall(nx,sh.pos.z,.1)){ sh.vel.x*=-1; bounced=true; } if(this.hitWall(sh.pos.x,nz,.1)){ sh.vel.z*=-1; bounced=true; }
+      if(bounced){ sh.bounces++; AUD.tick(); if(sh.bounces>1){ this.boom(sh.pos,.3); return this.killShell(sh); } } else { sh.pos.x=nx; sh.pos.z=nz; }
+      // shell vs shell
+      for(const o of this.shells){ if(o!==sh&&Math.hypot(o.pos.x-sh.pos.x,o.pos.z-sh.pos.z)<.3){ this.boom(sh.pos,.4); this.killShell(o); return this.killShell(sh); } }
+      // hits
+      const hd=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
+      for(const e of this.enemies){ if(e.alive&&!sh.enemy&&hd(sh.pos,e.pos)<.75){ this.destroyEnemy(e,sh.owner); return this.killShell(sh); } }
+      for(const t of this.pt){ if(!t.dead&&(sh.enemy||sh.owner!==t||sh.t>.4)&&hd(sh.pos,t.pos)<.7){ this.destroyPlayer(t); return this.killShell(sh); } }
+      if(sh.t>6)return this.killShell(sh); return true; });
+    this.fx=this.fx.filter(m=>{ m.userData.t+=dt; m.scale.multiplyScalar(1+4*dt); m.material.opacity=Math.max(0,.8-m.userData.t*2); if(m.userData.t>.4){ R.scene.remove(m); return false; } return true; });
+    if(this.state==='fight'&&!this.enemies.some(e=>e.alive)&&this.stateT>1){ this.state='cleared'; this.stateT=0; banner('MISSION CLEAR','',2,'gold'); AUD.cheer(); }
+    if(this.state==='cleared'&&this.stateT>2.4){ this.level++; if(this.level>=TK_LEVELS.length){ this.finish(true); return; } this.startLevel(); }
+    if(this.state==='fight'&&this.pt.every((t,i)=>t.dead&&this.lives[i]<=0)){ this.state='lost'; this.stateT=0; banner('MISSION FAILED','',2.2,'red'); AUD.sad(); }
+    if(this.state==='lost'&&this.stateT>2.6){ this.finish(false); return; }
+    this.hudScore();
+  },
+  los(a,b){ const n=16; for(let i=1;i<n;i++){ const x=lerp(a.x,b.x,i/n), z=lerp(a.z,b.z,i/n); if(this.hitWall(x,z,.05))return false; } return true; },
+  killShell(sh){ R.scene.remove(sh.m); if(!sh.enemy&&sh.owner)sh.owner.shells=Math.max(0,sh.owner.shells-1); return false; },
+  boom(pos,r){ const m=sph(r,0xffc233,{m:{transparent:true,opacity:.8},cast:false,recv:false},10); m.position.copy(pos); m.userData.t=0; R.scene.add(m); this.fx.push(m); },
+  destroyEnemy(e,owner){ e.alive=false; e.g.visible=false; this.boom(e.pos.clone().add(V3(0,.5,0)),.9); AUD.crash(); const i=this.pt.indexOf(owner); if(i>=0){ this.kills[i]++; buzz(owner.p,120); } },
+  destroyPlayer(t){ const i=this.pt.indexOf(t); t.dead=true; t.deadT=0; t.g.visible=false; this.lives[i]--; this.boom(t.pos.clone().add(V3(0,.5,0)),.9); AUD.crash(); buzz(t.p,300); if(this.lives[i]<=0)t.cross.visible=false; },
+  finish(won){ const rows=this.players.map((p,i)=>({p:p.cpu?null:p,name:p.name,color:p.color,val:this.kills[i],score:this.kills[i]+' kills'+(won?' · all missions clear':' · mission '+(this.level+1))})).sort((a,b)=>b.val-a.val); endSport(rows,'Tanks'); },
+  onKey(k){ if(TEST){ const t=this.pt[0]; if(k===' ')this.fire(t); if(k==='w')t.p.joy={x:0,y:1}; if(k==='s')t.p.joy={x:0,y:-1}; if(k==='a')t.p.joy={x:-1,y:0}; if(k==='d')t.p.joy={x:1,y:0}; if(k==='x')t.p.joy={x:0,y:0}; } },
+  dispose(){}
+};
+const _tk1=new THREE.Vector3();
 /* ============================== CONTROLLER LAB (debug) ============================== */
 SPORTS.lab={
   name:'Controller Lab',icon:'🕹️',players:'test your phone',
@@ -1393,6 +1497,7 @@ function flash(){ const f=$('#cFlash'); f.style.opacity=.6; setTimeout(()=>f.sty
 function pop(txt){ const p=$('#cPop'); if(txt)p.textContent=txt; p.classList.add('on'); clearTimeout(p._t); p._t=setTimeout(()=>{ p.classList.remove('on'); p.textContent='SWING!'; },260); }
 function applyUI(cfg){
   C.ui=cfg; C.mode=cfg.mode||''; C.rate=cfg.rate||5; const A=window.PS_ART||{}; if(cfg.art&&A[cfg.art])$('#cIcon').innerHTML='<img src="'+A[cfg.art]+'" alt="">'; else $('#cIcon').textContent=cfg.icon||'🎮'; $('#cTitle').textContent=cfg.title||''; $('#cSub').innerHTML=cfg.sub||'';
+  $('#cMain').classList.toggle('joy',!!cfg.joy); $('#cJoy').classList.toggle('on',!!cfg.joy);
   const b=$('#cBtns'); b.innerHTML=''; (cfg.btns||[]).forEach(bt=>{ const d=document.createElement('div'); d.className='cbtn'+(bt.hold?' hold':'')+(bt.sec?' sec':'')+(bt.on?' on':''); d.textContent=bt.label; d.style.zIndex=2; d.style.position='relative';
     const down=e=>{ e.preventDefault(); if(d.classList.contains('down'))return; d.classList.add('down'); try{d.setPointerCapture(e.pointerId);}catch(x){} if(bt.id==='calib'||bt.id==='recenter'){ miCalibrate(); } if(bt.id==='resetpos')miResetPos(); csend({t:'b',id:bt.id,d:1}); try{navigator.vibrate&&navigator.vibrate(15);}catch(x){} };
     const up=e=>{ if(!d.classList.contains('down'))return; d.classList.remove('down'); const st=recentStats(); csend(Object.assign({t:'b',id:bt.id,d:0},st)); };
@@ -1481,6 +1586,15 @@ function miSend(){
     csend({t:'s0',ts:ts0,p:Math.round(p*10)/10,dx:dx/n,dy:dy/n,dz:0,rg:Math.round(-dx/n*300),b:0,g:0,touch:1}); pop(); csend({t:'s1',ts0,ts1:t,p:Math.round(p*10)/10,dx:dx/n,dy:dy/n,dz:0,ra:0,rb:0,rg:Math.round(-dx/n*300),b:0,g:0,touch:1}); C.hist.push({t,mag:p,ax:dx/n,ay:dy/n,az:0,ra:0,rb:0,rg:-dx/n*300}); flash(); $('#cMeter i').style.width='0%'; };
   el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
   setInterval(()=>{ if(C.touch&&!down){ MI.v.multiplyScalar(.85); MI.p.multiplyScalar(.9); } },33);
+})();
+/* --- virtual joystick (tanks) --- */
+(function(){ const el=$('#cJoy'), knob=el.querySelector('.knob'); let id=null, cx=0, cy=0, lastSend=0, cur={x:0,y:0};
+  const send=(force)=>{ const t=performance.now(); if(force||t-lastSend>50){ lastSend=t; csend({t:'j',x:Math.round(cur.x*100)/100,y:Math.round(cur.y*100)/100}); } };
+  el.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); id=e.pointerId; const r=el.getBoundingClientRect(); cx=r.left+r.width/2; cy=r.top+r.height/2; try{el.setPointerCapture(id);}catch(x){} move(e); });
+  const move=e=>{ if(e.pointerId!==id)return; const r=el.getBoundingClientRect(); const R=r.width/2-10; let dx=e.clientX-cx, dy=e.clientY-cy; const d=Math.hypot(dx,dy); if(d>R){ dx*=R/d; dy*=R/d; } knob.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`; cur={x:dx/R,y:-dy/R}; send(false); };
+  const up=e=>{ if(e.pointerId!==id)return; id=null; knob.style.transform='translate(-50%,-50%)'; cur={x:0,y:0}; send(true); };
+  el.addEventListener('pointermove',move); el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
+  setInterval(()=>{ if(id!=null)send(true); },100);
 })();
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&C.state==='pad'){ navigator.wakeLock&&navigator.wakeLock.request('screen').then(w=>C.wl=w).catch(()=>{}); if(!C.connected)ctrlConnect(); } });
 /* =====================================================================

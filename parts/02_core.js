@@ -134,6 +134,7 @@ function onCtrlMsg(c,m){
       onSwing(p,sw); break; }
     case 'o': p.orient={a:m.a||0,b:m.b||0,g:m.g||0}; if(G.sport&&G.sport.onOrient)G.sport.onOrient(p); break;
     case 'm': ctrlOf(p).packet(m.d); p.hasMotion=true; break;
+    case 'j': p.joy={x:clamp(m.x||0,-1,1),y:clamp(m.y||0,-1,1)}; break;
     case 'cal': ctrlOf(p).calibrated=true; toast(p.name+' calibrated'); AUD.tick(); if(G.sport&&G.sport.onCalibrate)G.sport.onCalibrate(p); break;
     case 'b': p.btn[m.id]=!!m.d; onBtn(p,m.id,!!m.d,m); break;
     case 'pong': { const r=now()-m.hs; p.rtts=(p.rtts||[]).concat([r]).slice(-6); p.rtt=Math.min(...p.rtts); p.owd=clamp(p.rtt/2,0,.15); break; }
@@ -187,7 +188,7 @@ function startSport(id){
   ['#hudTL','#hudTC','#hudTR','#hudB'].forEach(s=>$(s).innerHTML=''); $('#bowlcard').classList.add('hidden'); $('#golfcard').classList.add('hidden'); $('#minimap').classList.add('hidden'); $('#gauge').classList.add('hidden');
   buildChips(); const s=SPORTS[id]; G.sport=Object.create(s); G.sport.build(G.players.slice()); AUD.init();
 }
-function disposeSport(){ if(G.sport){ try{G.sport.dispose&&G.sport.dispose();}catch(e){} G.sport=null; } if(R.scene){ R.scene=null; } hideBanner(); $('#hud').classList.add('hidden'); }
+function disposeSport(){ R.views=null; $('#vsplit').classList.remove('on'); if(G.sport){ try{G.sport.dispose&&G.sport.dispose();}catch(e){} G.sport=null; } if(R.scene){ R.scene=null; } hideBanner(); $('#hud').classList.add('hidden'); }
 function endSport(rows,title){
   // rows: [{p:player|null,name,color,score:'text',val:number}] sorted best first
   G.state='results'; $('#resTitle').textContent=title||SPORTS[G.sportId].name+' results';
