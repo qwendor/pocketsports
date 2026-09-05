@@ -126,7 +126,10 @@ const ARTKEY={'🎾':'ic_tennis','🎳':'ic_bowling','⚾':'ic_baseball','⛳':'
 function buildChips(){ const c=$('#chips'); c.innerHTML=''; G.players.forEach(p=>{ const d=document.createElement('div'); d.className='chip'+(p.online?'':' off'); d.id='chip'+p.slot; d.style.setProperty('--c',p.color); d.innerHTML='<span class="dot"></span>'+esc(p.name); c.appendChild(d); }); }
 function swingChip(p){ const d=$('#chip'+p.slot); if(d){ d.classList.add('pulse'); clearTimeout(d._t); d._t=setTimeout(()=>d.classList.remove('pulse'),220); } if(G.state==='lobby'){ const c=$('#plist').children[p.slot]; if(c){ c.classList.add('swing'); AUD.swish(); clearTimeout(c._t); c._t=setTimeout(()=>c.classList.remove('swing'),260); } } }
 function onSwing(p,sw){ if(G.sport&&typeof G.sport.t==='number'){ sw.age=clamp(sw.age,0,.5); sw.start=G.sport.t-sw.age; } if(G.sport&&G.sport.onSwing)G.sport.onSwing(p,sw); }
+// quitting a game: the TV button and Esc quit at once; a phone's MENU button must be pressed twice within 4 s
+function quitGame(confirm){ if(G.state!=='play'){ if(G.state!=='menu'&&(G.players.length||TEST))showMenu(); return; } if(confirm&&!(G.quitAsk&&now()-G.quitAsk<4)){ G.quitAsk=now(); banner('QUIT?','Press MENU again on the phone to go back to the sport menu',3.5); AUD.tick(); return; } G.quitAsk=0; showMenu(); }
 function onBtn(p,id,down,m){
+  if(id==='menu'){ if(down)quitGame(true); return; }
   if(G.state==='play'&&G.sport){ if(G.sport.onBtn)G.sport.onBtn(p,id,down,m); return; }
   if(!down)return;
   if(G.state==='lobby'){ if(id==='ready'){ p.ready=!p.ready; renderLobby(); refreshPhones(); AUD.tick(); } if(id==='start'&&p.slot===G.players[0].slot)showMenu(); }
@@ -161,9 +164,9 @@ function renderMenu(){ const t=$('#tiles'); const ids=Object.keys(SPORTS); if(!t
   [...t.children].forEach((c,i)=>c.classList.toggle('sel',i===G.menuIdx)); }
 function showIntro(id){ G.state='intro'; G.sportId=id; const s=SPORTS[id]; showScreen('intro'); $('#introIc').innerHTML=ART['ic_'+id]?'<img src="'+ART['ic_'+id]+'" alt="">':s.icon; $('#introName').textContent=s.name; $('#introHow').innerHTML=s.how.map(h=>'<li>'+h+'</li>').join(''); $('#introWho').textContent=s.who(G.players.length); refreshPhones(); AUD.tick(); }
 function startSport(id){
-  G.sportId=id; G.state='play'; hideBanner(); showScreen(''); $('#hud').classList.remove('hidden');
+  disposeSport(); G.sportId=id; G.state='play'; hideBanner(); showScreen(''); $('#hud').classList.remove('hidden');
   ['#hudTL','#hudTC','#hudTR','#hudB'].forEach(s=>$(s).innerHTML=''); $('#bowlcard').classList.add('hidden'); $('#golfcard').classList.add('hidden'); $('#minimap').classList.add('hidden'); $('#gauge').classList.add('hidden');
-  disposeSport(); buildChips(); const s=SPORTS[id]; G.sport=Object.create(s); G.sport.build(G.players.slice()); AUD.init();
+  buildChips(); const s=SPORTS[id]; G.sport=Object.create(s); G.sport.build(G.players.slice()); AUD.init();
 }
 function disposeSport(){ if(G.sport){ try{G.sport.dispose&&G.sport.dispose();}catch(e){} G.sport=null; } if(R.scene){ R.scene=null; } hideBanner(); $('#hud').classList.add('hidden'); }
 function endSport(rows,title){
@@ -188,7 +191,7 @@ function showTitle(){ G.state='title'; disposeSport(); showScreen('title'); }
 $('#bHost').onclick=hostStart; $('#bCtrl').onclick=()=>{ location.href=location.pathname+'?ctrl'; };
 $('#bMenu').onclick=()=>{ if(G.players.length||TEST)showMenu(); }; $('#bLobbyBack').onclick=showTitle;
 $('#bStart').onclick=()=>startSport(G.sportId); $('#bIntroBack').onclick=showMenu;
-$('#bAgain').onclick=()=>startSport(G.sportId); $('#bResMenu').onclick=showMenu;
+$('#bAgain').onclick=()=>startSport(G.sportId); $('#bResMenu').onclick=showMenu; $('#quitBtn').onclick=()=>quitGame(false);
 
 /* ---------------- main loop ---------------- */
 function frame(){ requestAnimationFrame(frame); if(G.manual)return; tick(); }

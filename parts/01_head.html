@@ -67,7 +67,9 @@ button.sec:active{box-shadow:0 2px 0 #c9d6e6}
 #intro .who{font-size:14px;color:#6b7c93;margin-bottom:8px}
 #hud{position:absolute;inset:0;pointer-events:none}
 .hudbox{position:absolute;background:var(--panel);border-radius:18px;padding:10px 16px;box-shadow:var(--shadow);font-size:clamp(13px,1.5vw,18px)}
-#hudTL{left:18px;top:18px}#hudTR{right:18px;top:18px}#hudB{left:50%;bottom:18px;transform:translateX(-50%);white-space:nowrap}
+#hudTL{left:18px;top:18px}#hudTR{right:18px;top:66px}
+#quitBtn{position:absolute;right:18px;top:18px;pointer-events:auto;padding:8px 14px;font-size:13px;border-radius:12px;background:#fff;color:#3a4a60;box-shadow:0 4px 0 #c9d6e6,0 8px 16px rgba(0,0,0,.1);letter-spacing:1px}
+#quitBtn:active{transform:translateY(3px);box-shadow:0 1px 0 #c9d6e6}#hudB{left:50%;bottom:18px;transform:translateX(-50%);white-space:nowrap}
 #hudTC{left:50%;top:18px;transform:translateX(-50%)}
 .hudbox:empty{display:none}
 .sb{display:grid;gap:4px 14px;align-items:center;grid-template-columns:auto auto}
@@ -220,6 +222,7 @@ button.sec:active{box-shadow:0 2px 0 #c9d6e6}
       </div>
     </div>
     <div id="hud" class="hidden">
+      <button id="quitBtn" title="Back to the sport menu (Esc)">✕ MENU</button>
       <div class="hudbox" id="hudTL"></div><div class="hudbox" id="hudTC"></div><div class="hudbox" id="hudTR"></div><div class="hudbox" id="hudB"></div>
       <div id="bowlcard" class="hidden"></div>
       <div id="golfcard" class="hidden"></div>
@@ -261,7 +264,7 @@ button.sec:active{box-shadow:0 2px 0 #c9d6e6}
       <div id="cFlash"></div>
       <div id="cPop">SWING!</div>
     </div>
-    <div id="cFoot"><span id="cSensTxt">Sensitivity: normal</span><span><button class="sec" id="cSens">SENSITIVITY</button> <button class="sec" id="cTouch">TOUCH MODE</button></span></div>
+    <div id="cFoot"><span id="cSensTxt">Sensitivity: normal</span><span><button class="sec" id="cMenu">MENU</button> <button class="sec" id="cSens">SENSITIVITY</button> <button class="sec" id="cTouch">TOUCH MODE</button></span></div>
   </div>
 </div>
 <script src="art.js" onerror="window.PS_ART={}"></script>

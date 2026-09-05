@@ -13,6 +13,7 @@ function ctrlInit(){
   $('#cJoinBtn').onclick=ctrlJoin; $('#cCode').addEventListener('keydown',e=>{ if(e.key==='Enter')ctrlJoin(); });
   $('#cSens').onclick=()=>{ C.sens=C.sens===1?1.4:C.sens===1.4?.7:1; localStorage.setItem('ps_sens',C.sens); sensLabel(); };
   $('#cTouch').onclick=()=>setTouch(!C.touch);
+  $('#cMenu').onclick=()=>{ csend({t:'b',id:'menu',d:1}); csend({t:'b',id:'menu',d:0}); try{navigator.vibrate&&navigator.vibrate(15);}catch(e){} };
   document.addEventListener('touchmove',e=>{ if(C.state!=='join')e.preventDefault(); },{passive:false});
   document.addEventListener('gesturestart',e=>e.preventDefault());
   window.addEventListener('devicemotion',onMotion); window.addEventListener('deviceorientation',onOrient);
