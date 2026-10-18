@@ -84,7 +84,7 @@ same object: `ctrl.q`, `ctrl.axis()` (where the phone points), `ctrl.normal()` (
 
 ## Controls on the laptop (host)
 
-Enter / Esc / arrow keys move through the menus. Esc during a game returns to the sport menu.
+Enter / Esc / arrow keys move through the menus. Esc during a game returns to the sport menu. `F` or the FULLSCREEN button (top right) toggles fullscreen on the TV; phones have a FULLSCREEN button in the controller footer (not on iPhone Safari, which has no fullscreen API for web pages; add the page to the home screen instead).
 
 ## Testing without phones
 

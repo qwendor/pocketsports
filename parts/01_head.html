@@ -69,7 +69,8 @@ button.sec:active{box-shadow:0 2px 0 #c9d6e6}
 #hud{position:absolute;inset:0;pointer-events:none}
 .hudbox{position:absolute;background:var(--panel);border-radius:18px;padding:10px 16px;box-shadow:var(--shadow);font-size:clamp(13px,1.5vw,18px)}
 #hudTL{left:18px;top:18px}#hudTR{right:18px;top:66px}
-#quitBtn{position:absolute;right:18px;top:18px;pointer-events:auto;padding:8px 14px;font-size:13px;border-radius:12px;background:#fff;color:#3a4a60;box-shadow:0 4px 0 #c9d6e6,0 8px 16px rgba(0,0,0,.1);letter-spacing:1px}
+#fsBtn{position:fixed;right:18px;top:18px;z-index:40;pointer-events:auto;padding:8px 14px;font-size:13px;border-radius:12px;background:#fff;color:#3a4a60;box-shadow:0 4px 0 #c9d6e6,0 8px 16px rgba(0,0,0,.1);letter-spacing:1px}#fsBtn:active{transform:translateY(3px);box-shadow:0 1px 0 #c9d6e6}#fsBtn.hidden{display:none}
+#quitBtn{position:absolute;right:172px;top:18px;pointer-events:auto;padding:8px 14px;font-size:13px;border-radius:12px;background:#fff;color:#3a4a60;box-shadow:0 4px 0 #c9d6e6,0 8px 16px rgba(0,0,0,.1);letter-spacing:1px}
 #quitBtn:active{transform:translateY(3px);box-shadow:0 1px 0 #c9d6e6}#hudB{left:50%;bottom:18px;transform:translateX(-50%);white-space:nowrap}
 #hudTC{left:50%;top:18px;transform:translateX(-50%)}
 .hudbox:empty{display:none}
@@ -198,6 +199,7 @@ button.sec:active{box-shadow:0 2px 0 #c9d6e6}
 </head>
 <body>
 <div id="host">
+  <button id="fsBtn" title="Fullscreen (F)">⛶ FULLSCREEN</button>
   <div id="ui">
     <div id="title" class="screen skybg">
       <img id="logoImg" class="hidden" alt="Pocket Sports"><h1 class="logo" id="logoTxt">POCKET<span>SPORTS</span></h1>
@@ -288,7 +290,7 @@ button.sec:active{box-shadow:0 2px 0 #c9d6e6}
       <div id="cCal" class="hidden"><div class="ph"></div><h3>Calibrate</h3><p>Hold the phone flat like a TV remote, screen up, with the top edge pointing at the TV. Then tap CALIBRATE. Tilting the phone up and down, left and right, and rolling your wrist will move your hand on screen.</p><button class="big" id="cCalBtn">CALIBRATE</button><button class="sec" id="cCalSkip">LATER</button></div>
       <div id="cPop">SWING!</div>
     </div>
-    <div id="cFoot"><span id="cSensTxt">Sensitivity: normal</span><span><button class="sec" id="cMenu">MENU</button> <button class="sec" id="cRecenter">RECENTER</button> <button class="sec" id="cSens">SENSITIVITY</button> <button class="sec" id="cTouch">TOUCH MODE</button></span></div>
+    <div id="cFoot"><span id="cSensTxt">Sensitivity: normal</span><span><button class="sec" id="cMenu">MENU</button> <button class="sec" id="cFull">FULLSCREEN</button> <button class="sec" id="cRecenter">RECENTER</button> <button class="sec" id="cSens">SENSITIVITY</button> <button class="sec" id="cTouch">TOUCH MODE</button></span></div>
   </div>
 </div>
 <script src="art.js" onerror="window.PS_ART={}"></script>

@@ -200,6 +200,7 @@ function endSport(rows,title){
 window.addEventListener('keydown',e=>{
   if(e.repeat)return; AUD.init();
   const k=e.key;
+  if((k==='f'||k==='F')&&!e.ctrlKey&&!e.metaKey&&!e.altKey){ FS.toggle(); return; }
   if(G.state==='title'){ if(k==='Enter'||k===' ')hostStart(); return; }
   if(G.state==='lobby'){ if(k==='Enter'&&(G.players.length||TEST))showMenu(); if(k==='Escape')showTitle(); return; }
   if(G.state==='menu'){ if(k==='ArrowLeft'||k==='ArrowUp')menuMove(-1); if(k==='ArrowRight'||k==='ArrowDown')menuMove(1); if(k==='Enter')menuPick(); if(k==='Escape')showLobby(); return; }
@@ -212,6 +213,12 @@ $('#bHost').onclick=hostStart; $('#bCtrl').onclick=()=>{ location.href=location.
 $('#bMenu').onclick=()=>{ if(G.players.length||TEST)showMenu(); }; $('#bLobbyBack').onclick=showTitle;
 $('#bStart').onclick=()=>startSport(G.sportId); $('#bIntroBack').onclick=showMenu;
 $('#bAgain').onclick=()=>startSport(G.sportId); $('#bResMenu').onclick=showMenu; $('#quitBtn').onclick=()=>quitGame(false);
+/* fullscreen (host button + F key; phone FULLSCREEN button). iOS Safari has no fullscreen API for pages, so the buttons hide there */
+const FS={el:()=>document.fullscreenElement||document.webkitFullscreenElement||null,ok:()=>!!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen),
+  toggle(){ const d=document.documentElement; try{ if(FS.el()){ const x=document.exitFullscreen||document.webkitExitFullscreen; if(x)x.call(document); } else { const r=d.requestFullscreen||d.webkitRequestFullscreen; const pr=r.call(d,{navigationUI:'hide'}); if(pr&&pr.catch)pr.catch(()=>{}); } }catch(e){} FS.label(); },
+  label(){ const on=!!FS.el(); const b=$('#fsBtn'); if(b){ b.textContent=on?'⛶ EXIT FULLSCREEN':'⛶ FULLSCREEN'; b.classList.toggle('hidden',!FS.ok()); } const c=$('#cFull'); if(c){ c.textContent=on?'EXIT FULL':'FULLSCREEN'; c.style.display=FS.ok()?'':'none'; } }};
+$('#fsBtn').onclick=()=>{ AUD.init(); FS.toggle(); }; $('#cFull').onclick=()=>FS.toggle();
+document.addEventListener('fullscreenchange',FS.label); document.addEventListener('webkitfullscreenchange',FS.label); FS.label();
 
 /* ---------------- main loop ---------------- */
 function frame(){ requestAnimationFrame(frame); if(G.manual)return; tick(); }
